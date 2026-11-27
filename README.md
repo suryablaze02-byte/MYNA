@@ -3,6 +3,9 @@
 A music player for Android with a bold Bento look: lime and ink tiles, big type, and no clutter.
 It plays songs from the web and from your phone, learns what you like, and gives you a fresh mix every day.
 
+[![Download](https://img.shields.io/github/v/release/suryablaze02-byte/MYNA?style=for-the-badge&label=Download&labelColor=111111&color=C6F432)](https://github.com/suryablaze02-byte/MYNA/releases/latest)
+[![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-C6F432?style=for-the-badge&labelColor=111111&logo=kofi&logoColor=white)](#support)
+
 <p>
   <img src="docs/screens/home.png" width="24%" alt="Home">
   <img src="docs/screens/discover.png" width="24%" alt="Discover">
@@ -50,3 +53,28 @@ adb install -r composeApp/build/outputs/apk/debug/composeApp-debug.apk
 | `composeApp/src/commonMain` | Shared UI, the player engine, search and recommendations |
 | `composeApp/src/androidMain` | Android playback, media controls, the lock screen player and sound effects |
 | `design/` | Mockups and design notes |
+
+<div align="center">
+
+<h2 id="support">Support</h2>
+
+MYNA is free and always will be. If it has kept you company, you can chip in on Ko-fi from anywhere, or over UPI in India:
+
+<br/>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <b>Ko-fi</b> · worldwide<br/><br/>
+      <a href="https://ko-fi.com/suryavardhan1"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support MYNA on Ko-fi" height="40" /></a><br/><br/>
+      <sub><a href="https://ko-fi.com/suryavardhan1">ko-fi.com/suryavardhan1</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <b>UPI</b> · India<br/><br/>
+      <img src="docs/upi_support.png" alt="UPI QR code to support MYNA: mochi.vardhan@federal (Surya Vardhan)" width="220" /><br/>
+      <sub>UPI ID: <code>mochi.vardhan@federal</code> · Surya Vardhan</sub>
+    </td>
+  </tr>
+</table>
+
+</div>
