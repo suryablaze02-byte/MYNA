@@ -50,4 +50,11 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    // The release APK is MYNA-v1.1.0.apk, not Gradle's default composeApp-release.apk.
+    applicationVariants.all {
+        val v = versionName
+        if (buildType.name == "release") outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "MYNA-v$v.apk"
+        }
+    }
 }
