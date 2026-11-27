@@ -4,6 +4,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -37,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -64,7 +69,16 @@ sealed interface Page {
 /** Screen stack plus the Now Playing sheet. [back] returns false when there is nothing left to close. */
 class Nav {
     val stack = mutableStateListOf<Page>(Page.Home)
-    var nowPlaying by mutableStateOf(false)
+    /** Windows has no Now Playing page: the bar, the queue panel and the mini player do its work. */
+    var noPlayerPage = false
+    private var np by mutableStateOf(false)
+    var nowPlaying: Boolean
+        get() = np
+        set(v) { np = v && !noPlayerPage }
+    /** Windows: the small always-on-top player is showing instead of the main window. */
+    var mini by mutableStateOf(false)
+    /** Windows: the queue panel on the right is open. */
+    var queueOpen by mutableStateOf(false)
     var libTab by mutableIntStateOf(0)
     var songSort by mutableIntStateOf(0)
     var albumSort by mutableIntStateOf(0)
@@ -203,6 +217,7 @@ private fun WideLayout(app: AppCtx) {
         Row(Modifier.weight(1f)) {
             Sidebar(app)
             Box(Modifier.weight(1f)) { PageContent(app) }
+            if (app.nav.queueOpen) QueuePanel(app)
         }
         PlayerBar(app)
     }
@@ -245,7 +260,8 @@ private fun PlayerBar(app: AppCtx) {
         Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(20.dp)).background(p.tile).padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.weight(1f).clickable(enabled = t != null) { app.nav.nowPlaying = true }, verticalAlignment = Alignment.CenterVertically) {
+        // On Windows the bar is the player, so the cover opens nothing.
+        Row(Modifier.weight(1f).clickable(enabled = t != null && !app.platform.isDesktop) { app.nav.nowPlaying = true }, verticalAlignment = Alignment.CenterVertically) {
             Cover(t, Modifier.size(56.dp), 12.dp)
             Spacer(Modifier.width(12.dp))
             Column {
@@ -260,7 +276,74 @@ private fun PlayerBar(app: AppCtx) {
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             t?.let { LikeBtn(app, it) }
             FadeChip(app)
-            IconBtn(Ic.queue) { if (t != null) app.nav.nowPlaying = true }
+            if (app.platform.isDesktop) IconBtn(Ic.mini) { app.nav.mini = true }
+            // The queue: a panel on Windows, Now Playing's queue page on tablets.
+            IconBtn(Ic.queue) {
+                if (app.platform.isDesktop) app.nav.queueOpen = !app.nav.queueOpen
+                else if (t != null) { app.nav.npPage = 2; app.nav.nowPlaying = true }
+            }
+        }
+    }
+}
+
+/** Windows: the queue beside the page. Drag songs by the handle to change the order. */
+@Composable
+private fun QueuePanel(app: AppCtx) {
+    val p = LocalPal.current
+    val st by app.engine.state.collectAsState()
+    Column(Modifier.width(380.dp).fillMaxHeight().padding(top = 16.dp, end = 12.dp).clip(RoundedCornerShape(20.dp)).background(p.tile)) {
+        Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 6.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Txt("Queue", 18, FontWeight.ExtraBold)
+                if (st.queue.isNotEmpty()) Txt("${st.queue.size - st.index} songs · ${com.myna.player.fmtTotal(st.queue.drop(st.index).sumOf { it.durationMs })}", 12, color = p.sub)
+            }
+            IconBtn(Ic.x) { app.nav.queueOpen = false }
+        }
+        androidx.compose.foundation.lazy.LazyColumn(
+            Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            st.current?.let { c -> item { SectionHead("Now playing") }; item { SongRow(c, true) {} } }
+            item { SectionHead("Up next") }
+            upNext(app)
+        }
+    }
+}
+
+// ---------------------------------------------------------------- Windows mini player
+
+/** A small square of the album art; the controls show while the mouse is over it, or when paused. */
+@Composable
+fun MiniPlayer(platform: Platform, engine: Engine, library: Library, nav: Nav) {
+    MynaTheme(library.prefs.theme.v) {
+        CompositionLocalProvider(LocalArt provides library.art) {
+            val st by engine.state.collectAsState()
+            val t = st.current
+            val hover = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            val over by hover.collectIsHoveredAsState()
+            Box(Modifier.fillMaxSize().background(Color(0xFF111111)).hoverable(hover)) {
+                Cover(t, Modifier.fillMaxSize(), 0.dp)
+                // Faded, never removed: the first click on the window always reaches the buttons.
+                val shown by androidx.compose.animation.core.animateFloatAsState(if (over || !st.playing || t == null) 1f else 0f)
+                run {
+                    Box(Modifier.fillMaxSize().graphicsLayer { alpha = shown }.background(Color.Black.copy(alpha = 0.55f)).padding(12.dp)) {
+                        Box(Modifier.align(Alignment.TopEnd)) { IconBtn(Ic.expand, Color.White, 36.dp) { nav.mini = false } }
+                        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Txt(t?.title ?: "Nothing playing", 15, FontWeight.ExtraBold, Color.White)
+                            Txt(t?.artist ?: "Pick a song in MYNA", 12, FontWeight.Bold, Color.White.copy(alpha = 0.7f))
+                            Spacer(Modifier.height(10.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                IconBtn(Ic.prev, Color.White) { engine.prev() }
+                                RoundBtn(if (st.playing) Ic.pause else Ic.play, 52.dp, Lime, OnLime) { engine.toggle() }
+                                IconBtn(Ic.next, Color.White) { engine.next() }
+                            }
+                            val frac = if (st.durationMs > 0) (st.positionMs.toFloat() / st.durationMs).coerceIn(0f, 1f) else 0f
+                            Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(3.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.25f))) {
+                                Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(Lime))
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

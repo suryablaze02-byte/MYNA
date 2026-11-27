@@ -1,5 +1,6 @@
 package com.myna.player.ui
 
+import com.myna.player.device
 import androidx.compose.foundation.shape.CircleShape
 import com.myna.player.Update
 import androidx.compose.foundation.background
@@ -38,7 +39,7 @@ import com.myna.player.Prefs
 import com.myna.player.fmtTime
 import kotlin.math.roundToInt
 
-private const val VERSION = "1.1.0"
+private const val VERSION = "1.2.0"
 private val AppCtx.version get() = platform.updater?.version ?: VERSION
 private val THEMES = listOf("System", "Light", "Dark")
 private val ANIM = listOf("On", "Wi-Fi only", "Off")
@@ -85,7 +86,7 @@ fun SettingsScreen(app: AppCtx) {
             Group(
                 { HubRow(Ic.fade, "Playback", if (st.crossfadeSec == 0) "Crossfade off" else "Crossfade ${st.crossfadeSec} s", go(0)) },
                 { HubRow(Ic.sliders, "Sound", soundLabel(pr), go(6)) },
-                { HubRow(Ic.folder, "Library", if (!pr.phoneSongs.on) "Phone songs off" else "$folders folder${if (folders == 1) "" else "s"}", go(2)) },
+                { HubRow(Ic.folder, "Library", if (!pr.phoneSongs.on) "${device.replaceFirstChar { it.uppercase() }} songs off" else "$folders folder${if (folders == 1) "" else "s"}", go(2)) },
             )
         }
         item {
@@ -243,10 +244,10 @@ private fun LazyListScope.librarySet(app: AppCtx) {
     val again = { app.library.refilter() }
     item {
         if (pr.phoneSongs.on) Group(
-            { ToggleRow("Songs on this phone", "Off: MYNA plays streamed music only", pr.phoneSongs, again) },
+            { ToggleRow("Songs on this $device", "Off: MYNA plays streamed music only", pr.phoneSongs, again) },
             { ToggleRow("Hide short clips", "Leaves out recordings under 30 seconds", pr.hideShort, again) },
             { ToggleRow("Merge duplicates", "The same song in two places shows once", pr.merge, again) },
-        ) else Group({ ToggleRow("Songs on this phone", "Off: MYNA plays streamed music only", pr.phoneSongs, again) })
+        ) else Group({ ToggleRow("Songs on this $device", "Off: MYNA plays streamed music only", pr.phoneSongs, again) })
     }
     if (!pr.phoneSongs.on) return
     item { SectionHead("Music folders") }
@@ -254,7 +255,7 @@ private fun LazyListScope.librarySet(app: AppCtx) {
         val p = LocalPal.current
         val all by app.library.all.collectAsState()
         val folders = remember(all) { all.groupingBy { it.folder.ifEmpty { "Other" } }.eachCount().entries.sortedByDescending { it.value } }
-        if (folders.isEmpty()) Group({ Txt("No music found on this phone yet.", 14, color = p.sub, modifier = Modifier.padding(vertical = 12.dp)) })
+        if (folders.isEmpty()) Group({ Txt("No music found on this $device yet.", 14, color = p.sub, modifier = Modifier.padding(vertical = 12.dp)) })
         else Group(*folders.map { (f, n) ->
             @Composable {
                 val off = f in pr.excluded
@@ -395,7 +396,7 @@ private fun LazyListScope.about(app: AppCtx) {
         val p = LocalPal.current
         Tile(Modifier.fillMaxWidth()) {
             Txt("Where the music comes from", 15, FontWeight.Bold)
-            Txt("Songs on this phone, and music streamed from public catalogues. Covers are official album art.", 13, color = p.sub, lines = 4)
+            Txt("Songs on this $device, and music streamed from public catalogues. Covers are official album art.", 13, color = p.sub, lines = 4)
         }
     }
 }

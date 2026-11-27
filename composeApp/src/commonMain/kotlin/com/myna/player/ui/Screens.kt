@@ -1,5 +1,6 @@
 package com.myna.player.ui
 
+import com.myna.player.device
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -82,13 +83,13 @@ internal fun EmptyLibrary(app: AppCtx) {
     val phone = app.library.prefs.phoneSongs.on
     Tile(Modifier.fillMaxWidth(), pad = 20.dp) {
         if (!phone) {
-            Txt("Songs on this phone are hidden", 20, FontWeight.ExtraBold, lines = 2)
+            Txt("Songs on this $device are hidden", 20, FontWeight.ExtraBold, lines = 2)
             Spacer(Modifier.height(6.dp))
             Txt("Find songs in Discover and Search, then tap ⋯ › Add to library to keep them here.", 14, color = p.sub, lines = 3)
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ActionTile(Ic.compass, "Discover", true) { app.nav.go(Page.Discover) }
-                ActionTile(Ic.folder, "Show phone songs", false) { app.library.prefs.phoneSongs.set(1); app.library.refilter() }
+                ActionTile(Ic.folder, "Show $device songs", false) { app.library.prefs.phoneSongs.set(1); app.library.refilter() }
             }
         } else if (scanning) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -101,7 +102,7 @@ internal fun EmptyLibrary(app: AppCtx) {
             Spacer(Modifier.height(6.dp))
             Txt(
                 if (app.platform.isDesktop) "MYNA looks in ${app.platform.sourceLabel()}. Choose the folder where your songs are."
-                else "Allow MYNA to read your music, or copy songs to this phone, then rescan.",
+                else "Allow MYNA to read your music, or copy songs to this $device, then rescan.",
                 14, color = p.sub, lines = 4,
             )
             app.platform.problem?.let { Spacer(Modifier.height(6.dp)); Txt(it, 14, FontWeight.Bold, lines = 4) }

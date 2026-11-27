@@ -19,7 +19,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import com.myna.player.online.AndroidOnline
+import com.myna.player.online.WebOnline
 import com.myna.player.online.OnlineMedia
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -86,8 +86,8 @@ class AndroidPlatform(private val ctx: Context) : Platform {
     override suspend fun art(track: Track): ImageBitmap? = withContext(Dispatchers.IO) {
         runCatching {
             if (track.online) {
-                val url = track.artRef.ifEmpty { null } ?: AndroidOnline.officialArt(track.title, track.artist)
-                return@runCatching (url?.let(AndroidOnline::image) ?: track.id.takeIf { it.startsWith("yt:") }?.let { AndroidOnline.youTubeArt(it.removePrefix("yt:")) })?.asImageBitmap()
+                val url = track.artRef.ifEmpty { null } ?: WebOnline.officialArt(track.title, track.artist)
+                return@runCatching (url?.let(::image) ?: track.id.takeIf { it.startsWith("yt:") }?.let { youTubeArt(it.removePrefix("yt:")) })?.asImageBitmap()
             }
             val bmp = if (Build.VERSION.SDK_INT >= 29) {
                 ctx.contentResolver.loadThumbnail(Uri.parse(track.uri), Size(512, 512), null)
@@ -96,7 +96,7 @@ class AndroidPlatform(private val ctx: Context) : Platform {
             }
             // No cover in the file: look the album's official one up, when Settings allow it.
             bmp?.asImageBitmap() ?: if (getInt("downloadCovers", 1) == 1 && track.artist != "Unknown artist")
-                AndroidOnline.officialArt(track.title, track.artist)?.let(AndroidOnline::image)?.asImageBitmap() else null
+                WebOnline.officialArt(track.title, track.artist)?.let(::image)?.asImageBitmap() else null
         }.getOrNull()
     }
 
@@ -105,21 +105,8 @@ class AndroidPlatform(private val ctx: Context) : Platform {
     override fun applySound(space: Int, eq: Int, clearBass: Int) = sound.apply(space, eq, clearBass)
     override val hasDolby get() = sound.hasDolby
     override fun openDolby() = sound.openDolby()
-    override suspend fun lyrics(title: String, artist: String, durationSec: Long): String? = withContext(Dispatchers.IO) {
-        fun get(url: String): String? = runCatching {
-            val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-            c.setRequestProperty("User-Agent", "MYNA music player"); c.connectTimeout = 8000; c.readTimeout = 8000
-            if (c.responseCode != 200) null else c.inputStream.bufferedReader().use { it.readText() }
-        }.getOrNull()
-        fun pick(o: org.json.JSONObject): String? = listOf("syncedLyrics", "plainLyrics")
-            .firstNotNullOfOrNull { k -> if (o.isNull(k)) null else o.optString(k).ifBlank { null } }
-        fun q(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
-        get("https://lrclib.net/api/get?track_name=${q(title)}&artist_name=${q(artist)}&duration=$durationSec")
-            ?.let { runCatching { pick(org.json.JSONObject(it)) }.getOrNull() }
-            ?: get("https://lrclib.net/api/search?q=" + q("$title $artist"))?.let { body ->
-                runCatching { val a = org.json.JSONArray(body); (0 until a.length()).firstNotNullOfOrNull { pick(a.getJSONObject(it)) } }.getOrNull()
-            }
-    }
+    override suspend fun lyrics(title: String, artist: String, durationSec: Long): String? =
+        withContext(Dispatchers.IO) { WebOnline.lyrics(title, artist, durationSec) }
     override fun openOutput() {
         // Android 14+ has a system output switcher; the old settings panel is gone there.
         val shown = if (android.os.Build.VERSION.SDK_INT >= 34) runCatching { android.media.MediaRouter2.getInstance(ctx).showSystemOutputSwitcher() }.getOrDefault(false)
@@ -159,7 +146,9 @@ class AndroidPlatform(private val ctx: Context) : Platform {
 
     override fun getStr(key: String, def: String) = prefs.getString(key, def) ?: def
     override fun putStr(key: String, value: String) = prefs.edit().putString(key, value).apply()
-    override val online: Online = AndroidOnline()
+    override val online: Online = WebOnline().also {
+        com.myna.player.online.YouTubeStreams.supported = { Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU }
+    }
     override val updater: AndroidUpdates by lazy { AndroidUpdates(ctx) }
     override fun nowMs() = System.currentTimeMillis()
     override fun monthOf(ms: Long) = Calendar.getInstance().apply { timeInMillis = ms }.let { it.get(Calendar.YEAR) * 12 + it.get(Calendar.MONTH) }
@@ -169,6 +158,17 @@ class AndroidPlatform(private val ctx: Context) : Platform {
         return cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
     }
 
+}
+
+private fun image(url: String): android.graphics.Bitmap? = WebOnline.bytes(url)?.let {
+    BitmapFactory.decodeByteArray(it, 0, it.size, BitmapFactory.Options().apply { inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 })
+}
+
+/** The YouTube video's own picture, cut to the square in its middle (where the cover sits). */
+private fun youTubeArt(videoId: String): android.graphics.Bitmap? {
+    val b = image(WebOnline.youTubeThumb(videoId)) ?: return null
+    val side = minOf(b.width, b.height * 3 / 4)
+    return android.graphics.Bitmap.createBitmap(b, (b.width - side) / 2, (b.height - side) / 2, side, side)
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)

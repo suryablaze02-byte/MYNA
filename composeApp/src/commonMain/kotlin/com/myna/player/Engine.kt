@@ -136,6 +136,18 @@ class Engine(private val platform: Platform, scope: CoroutineScope, private val 
         if (i in _state.value.queue.indices) transition(i, skipFade)
     }
 
+    /** Moves an Up next song (queue positions after the playing one) to another Up next position. */
+    fun move(from: Int, to: Int) = _state.update { s ->
+        val up = (s.index + 1) until s.queue.size
+        if (from !in up || to !in up || from == to) return@update s
+        s.copy(queue = s.queue.toMutableList().apply { add(to, removeAt(from)) })
+    }
+
+    /** Takes an Up next song out of the queue. */
+    fun remove(i: Int) = _state.update { s ->
+        if (i <= s.index || i !in s.queue.indices) s else s.copy(queue = s.queue.toMutableList().apply { removeAt(i) })
+    }
+
     fun seek(ms: Long) {
         finishFade()
         cur?.seek(ms)

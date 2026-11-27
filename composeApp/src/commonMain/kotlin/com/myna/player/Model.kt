@@ -46,6 +46,9 @@ fun fmtTotal(ms: Long): String {
     return if (m >= 60) "${m / 60} hr ${m % 60} min" else "$m min"
 }
 
+/** What the songs live on, for labels: "phone" on Android, "PC" on Windows. */
+var device = "phone"
+
 /** What each platform supplies: its music files, covers, a player deck and small settings. */
 interface Platform {
     val isDesktop: Boolean

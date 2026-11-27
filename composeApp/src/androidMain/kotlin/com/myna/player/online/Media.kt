@@ -36,21 +36,9 @@ object OnlineMedia {
         return DefaultDataSource.Factory(context, resolving)
     }
 
-    private val matched = java.util.concurrent.ConcurrentHashMap<String, String>()
+    fun videoIdFor(uri: String): String? = SongLinks.videoIdFor(uri)
 
-    /** The YouTube video for a song's uri, looking a Spotify / Apple Music song up once. Blocking. */
-    fun videoIdFor(uri: String): String? {
-        YouTubeLinks.videoId(uri)?.let { return it }
-        if (!uri.startsWith(MATCH)) return null
-        matched[uri]?.let { return it }
-        val p = queryParams(Uri.parse(uri).encodedQuery)
-        val hit = YouTubeSearch.match(p["t"].orEmpty(), p["a"].orEmpty(), p["d"]?.toDoubleOrNull())
-            ?: throw IOException("Couldn't find this song on YouTube")
-        matched[uri] = hit.videoId
-        return hit.videoId
-    }
-
-    const val MATCH = "myna-match://song"
+    const val MATCH = SongLinks.MATCH
 }
 
 /** Reads a googlevideo URL as consecutive ranges while looking like one stream to the player. */

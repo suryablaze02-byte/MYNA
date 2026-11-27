@@ -1,7 +1,5 @@
 package com.myna.player.online
 
-import android.os.Build
-import android.util.Log
 import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
@@ -66,6 +64,24 @@ fun queryParams(rawQuery: String?): Map<String, String> {
 
 private fun dec(s: String) = URLDecoder.decode(s, "UTF-8")
 
+/** `myna-match:` songs (Spotify / Apple Music) are looked up on YouTube when they play. */
+object SongLinks {
+    const val MATCH = "myna-match://song"
+    private val matched = ConcurrentHashMap<String, String>()
+
+    /** The YouTube video for a song's uri, looking a Spotify / Apple Music song up once. Blocking. */
+    fun videoIdFor(uri: String): String? {
+        YouTubeLinks.videoId(uri)?.let { return it }
+        if (!uri.startsWith(MATCH)) return null
+        matched[uri]?.let { return it }
+        val p = queryParams(uri.substringAfter('?', ""))
+        val hit = YouTubeSearch.match(p["t"].orEmpty(), p["a"].orEmpty(), p["d"]?.toDoubleOrNull())
+            ?: throw IOException("Couldn't find this song on YouTube")
+        matched[uri] = hit.videoId
+        return hit.videoId
+    }
+}
+
 class ResolvedStream(val url: String, val headers: Map<String, String>, val contentLength: Long?)
 
 /** A YouTube result: what a search or a song match gives back. */
@@ -83,8 +99,8 @@ object YouTubeStreams {
     private val recent = ConcurrentHashMap<String, Pair<ResolvedStream, Long>>()
     private val init by lazy { NewPipe.init(NewPipeDownloader(), Localization.DEFAULT) }
 
-    /** NewPipe 0.26 needs Android 13 (it uses URLEncoder.encode(String, Charset)). */
-    fun supported() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    /** NewPipe 0.26 needs Android 13 (it uses URLEncoder.encode(String, Charset)); Android sets this. */
+    @Volatile var supported: () -> Boolean = { true }
 
     fun requireSupported() {
         if (!supported()) throw IOException("Online music needs Android 13 or newer")
@@ -110,7 +126,7 @@ object YouTubeStreams {
                 } catch (e: LinkageError) {
                     throw IOException("YouTube can't run on this device: $e", e)
                 } catch (e: Exception) {
-                    Log.w(TAG, "YouTube $videoId: attempt ${attempt + 1} failed: ${e.message}")
+                    System.err.println("$TAG YouTube $videoId: attempt ${attempt + 1} failed: ${e.message}")
                     failure = e
                 }
             }

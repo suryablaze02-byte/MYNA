@@ -1,5 +1,6 @@
 package com.myna.player.ui
 
+import com.myna.player.device
 import com.myna.player.online
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.SolidColor
@@ -378,7 +379,7 @@ private fun MynaDialog(
     onConfirm: () -> Unit, onClose: () -> Unit, body: @Composable () -> Unit,
 ) {
     val p = LocalPal.current
-    Dialog(onClose) {
+    Dialog(onDismissRequest = onClose) {
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(p.tile).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -456,7 +457,7 @@ fun ListScreen(app: AppCtx, id: String) {
         if (list.isEmpty()) item {
             Txt(
                 when (id) { "liked" -> "Tap the heart on a playing song to keep it here."; "repeat" -> "Songs you play twice in a month show here."
-                    "added" -> "New songs on this phone show here."; "forgotten" -> "Songs you haven't played for a month show here."; else -> "Nothing here yet. Use ⋯ on any song to add it." },
+                    "added" -> "New songs on this $device show here."; "forgotten" -> "Songs you haven't played for a month show here."; else -> "Nothing here yet. Use ⋯ on any song to add it." },
                 14, color = p.sub, lines = 3, modifier = Modifier.padding(4.dp),
             )
         } else item { PlayShuffle(app, list, title) }

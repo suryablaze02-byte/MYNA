@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -57,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -377,11 +380,71 @@ private fun QueueView(app: AppCtx) {
             }
             item { SectionHead("Up next") }
             if (rest.isEmpty()) item { Txt("End of the queue", 14, color = p.sub, modifier = Modifier.padding(8.dp)) }
-            itemsIndexed(rest.take(200)) { i, tr -> SongRow(tr, false) { app.engine.jump(st.index + 1 + i) } }
+            upNext(app)
         }
         Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(Ic.shuffle, if (st.shuffle) "Shuffle on" else "Shuffle", st.shuffle) { app.engine.toggleShuffle() }
             ActionTile(Ic.heart, "Like all", false) { rest.forEach { if (!app.library.likes.has(it)) app.library.likes.toggle(it) } }
+        }
+    }
+}
+
+/**
+ * The Up next songs. Drag a song by its handle to move it; the X takes it out of the queue.
+ * The dragged row follows the mouse or finger and drops into the place it is over.
+ */
+fun androidx.compose.foundation.lazy.LazyListScope.upNext(app: AppCtx) {
+    item {
+        val st by app.engine.state.collectAsState()
+        val rest = st.queue.drop(st.index + 1).take(200)
+        val p = LocalPal.current
+        var from by remember { mutableStateOf<Int?>(null) }
+        var dy by remember { mutableStateOf(0f) }
+        var rowH by remember { mutableStateOf(1f) }
+        val gap = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.toPx() }
+        fun dropAt() = from?.let { (it + (dy / (rowH + gap)).roundToInt()).coerceIn(0, rest.lastIndex) }
+        val target = dropAt()
+        val at = st.index + 1
+        if (rest.isEmpty()) Txt("End of the queue", 14, color = p.sub, modifier = Modifier.padding(8.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            rest.forEachIndexed { i, tr ->
+                androidx.compose.runtime.key(tr.id, i) {
+                    // Rows between the dragged one and its drop place slide over to make room.
+                    val shift = when {
+                        from == null || target == null || i == from -> 0f
+                        i in (from!! + 1)..target -> -(rowH + gap)
+                        i in target until from!! -> rowH + gap
+                        else -> 0f
+                    }
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .zIndex(if (i == from) 1f else 0f)
+                            .graphicsLayer { translationY = if (i == from) dy else shift }
+                            .onSizeChanged { rowH = it.height.toFloat() },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.weight(1f)) {
+                            SongRow(tr, false, trail = {
+                                IconBtn(Ic.x, p.sub, 36.dp) { app.engine.remove(st.index + 1 + i) }
+                                Box(
+                                    Modifier.size(36.dp).pointerInput(tr.id, i, st.index, rest.size) {
+                                        detectDragGestures(
+                                            onDragStart = { from = i; dy = 0f },
+                                            onDragEnd = {
+                                                val f = from; val t = dropAt()
+                                                if (f != null && t != null) app.engine.move(at + f, at + t)
+                                                from = null; dy = 0f
+                                            },
+                                            onDragCancel = { from = null; dy = 0f },
+                                        ) { ch, d -> ch.consume(); dy += d.y }
+                                    },
+                                    contentAlignment = Alignment.Center,
+                                ) { Ico(Ic.grip, 20.dp, p.sub) }
+                            }) { app.engine.jump(st.index + 1 + i) }
+                        }
+                    }
+                }
+            }
         }
     }
 }

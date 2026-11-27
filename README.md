@@ -1,7 +1,7 @@
 # MYNA
 
-A music player for Android with a bold Bento look: lime and ink tiles, big type, and no clutter.
-It plays songs from the web and from your phone, learns what you like, and gives you a fresh mix every day.
+A music player for Android and Windows with a bold Bento look: lime and ink tiles, big type, and no clutter.
+It plays songs from the web and from your phone or PC, learns what you like, and gives you a fresh mix every day.
 
 [![Download](https://img.shields.io/github/v/release/suryablaze02-byte/MYNA?style=for-the-badge&label=Download&labelColor=111111&color=C6F432)](https://github.com/suryablaze02-byte/MYNA/releases/latest)
 [![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-C6F432?style=for-the-badge&labelColor=111111&logo=kofi&logoColor=white)](#support)
@@ -21,6 +21,13 @@ It plays songs from the web and from your phone, learns what you like, and gives
 
 <img src="docs/screens/tablet-home.png" width="100%" alt="MYNA on a tablet">
 
+**On Windows**, the same app with a queue panel you can reorder by dragging, and a mini player that stays on top:
+
+<p>
+  <img src="docs/screens/windows-discover.png" width="74%" alt="MYNA on Windows">
+  <img src="docs/screens/windows-mini.png" width="24%" alt="The mini player">
+</p>
+
 ## What it does
 
 - **Home:** jump back in, your listening time this week, songs on repeat and recently played.
@@ -29,6 +36,8 @@ It plays songs from the web and from your phone, learns what you like, and gives
 - **Now Playing:** crossfade, synced lyrics, queue, a sleep timer and the output device.
 - **Sound:** spaces (Studio, Stage, Big Hall, Headset), an equaliser and Clear Bass. The spaces run inside MYNA's own player, so they work on any phone and any speaker.
 - **Lock screen:** media controls in the notification. Tap the art and it fills the lock screen without unlocking the phone.
+- **Queue:** drag songs to change the order, or remove them.
+- **Windows:** your Music folder, a queue panel, and a mini player of just the album art and controls.
 - **Library:** liked songs, playlists, songs on your phone, and online songs you add with ⋯ › Add to library.
 - **Updates itself:** MYNA checks GitHub once a day. When a new version is out, a lime banner on Home installs it in one tap.
 
@@ -39,19 +48,28 @@ Android asks once to allow installs from your browser or file app.
 
 Needs Android 8.0 or newer. After that, MYNA updates itself.
 
+**Windows:** download `MYNA-<version>.exe` from [Releases](../../releases) and run it. It installs for your user only, with a Start menu entry and a desktop shortcut.
+The installer isn't signed yet, so Windows SmartScreen may warn you: click **More info › Run anyway**.
+MYNA reads songs from your Music folder (change it in Settings › Library). The equaliser and Clear Bass are Android only for now.
+
 ## Build
 
-Built with Kotlin Multiplatform and Compose Multiplatform, using Media3 ExoPlayer for playback.
+Built with Kotlin Multiplatform and Compose Multiplatform. Android plays through Media3 ExoPlayer, Windows through FFmpeg.
 
 ```sh
 ./gradlew :composeApp:assembleDebug
 adb install -r composeApp/build/outputs/apk/debug/composeApp-debug.apk
+
+./gradlew :composeApp:run          # Windows app
+./gradlew :composeApp:packageExe   # Windows installer
 ```
 
 | Folder | What's in it |
 |---|---|
 | `composeApp/src/commonMain` | Shared UI, the player engine, search and recommendations |
 | `composeApp/src/androidMain` | Android playback, media controls, the lock screen player and sound effects |
+| `composeApp/src/desktopMain` | Windows: FFmpeg playback, the Music folder, the mini player |
+| `composeApp/src/jvmShared` | Shared by both: online music, lyrics and the sound spaces |
 | `design/` | Mockups and design notes |
 
 <div align="center">

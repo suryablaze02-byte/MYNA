@@ -42,17 +42,7 @@ class AndroidSound(private val ctx: Context) {
             }
         }
         runCatching { bass?.apply { if (strengthSupported) setStrength((clearBass * 100).toShort()); enabled = clearBass > 0 } }
-        // wet, room size, damping, pre-delay ms, width.
-        // Studio: a small, close, bright room. Stage: live, a medium hall in front of you.
-        // Big Hall: a large concert hall with a long tail. Headset: very wide, almost no room.
-        val v = when (space) {
-            1 -> floatArrayOf(0.10f, 0.30f, 0.65f, 4f, 1.15f)
-            2 -> floatArrayOf(0.20f, 0.65f, 0.40f, 18f, 1.35f)
-            3 -> floatArrayOf(0.30f, 0.90f, 0.20f, 40f, 1.45f)
-            4 -> floatArrayOf(0.05f, 0.15f, 0.70f, 0f, 1.75f)
-            else -> floatArrayOf(0f, 0.5f, 0.5f, 0f, 1f)
-        }
-        this.space.apply { room = v[1]; damp = v[2]; preMs = v[3]; width = v[4]; wet = v[0] }
+        this.space.set(space)
         // Android's own virtualiser only helps in headphones, so only Headset uses it.
         runCatching { wide?.apply { if (space == 4 && strengthSupported) setStrength(1000); enabled = space == 4 } }
     }

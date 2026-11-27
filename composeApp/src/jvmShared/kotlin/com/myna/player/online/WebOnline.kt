@@ -1,7 +1,5 @@
 package com.myna.player.online
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import com.myna.player.Online
 import com.myna.player.OnlineAlbum
 import com.myna.player.OnlineArtist
@@ -17,7 +15,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
 
-class AndroidOnline : Online {
+/** Online music for the JVM apps (Android and Windows): iTunes, Deezer and YouTube. */
+class WebOnline : Online {
     override val problem: String?
         get() = if (YouTubeStreams.supported()) null else "Online music needs Android 13 or newer"
 
@@ -112,7 +111,7 @@ class AndroidOnline : Online {
     }
 
     override fun prefetch(t: Track) {
-        pool.execute { runCatching { OnlineMedia.videoIdFor(t.uri)?.let(YouTubeStreams::resolve) } }
+        pool.execute { runCatching { SongLinks.videoIdFor(t.uri)?.let(YouTubeStreams::resolve) } }
     }
 
     companion object {
@@ -123,17 +122,38 @@ class AndroidOnline : Online {
         private const val PHONE_AGENT =
             "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
 
-        fun image(url: String): Bitmap? {
+        /** Lyrics text (.lrc or plain) from LRCLIB, or null. Blocking. */
+        fun lyrics(title: String, artist: String, durationSec: Long): String? {
+            fun get(url: String): String? = runCatching {
+                val c = URL(url).openConnection() as HttpURLConnection
+                c.setRequestProperty("User-Agent", "MYNA music player"); c.connectTimeout = 8000; c.readTimeout = 8000
+                if (c.responseCode != 200) null else c.inputStream.bufferedReader().use { it.readText() }
+            }.getOrNull()
+            fun pick(o: JSONObject): String? = listOf("syncedLyrics", "plainLyrics")
+                .firstNotNullOfOrNull { k -> if (o.isNull(k)) null else o.optString(k).ifBlank { null } }
+            fun q(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
+            return get("https://lrclib.net/api/get?track_name=${q(title)}&artist_name=${q(artist)}&duration=$durationSec")
+                ?.let { runCatching { pick(JSONObject(it)) }.getOrNull() }
+                ?: get("https://lrclib.net/api/search?q=" + q("$title $artist"))?.let { body ->
+                    runCatching { val a = JSONArray(body); (0 until a.length()).firstNotNullOfOrNull { pick(a.getJSONObject(it)) } }.getOrNull()
+                }
+        }
+
+        /** A picture's bytes, for the platform to decode. */
+        fun bytes(url: String): ByteArray? {
             if (!url.startsWith("https://")) return null
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.connectTimeout = 8000
             conn.readTimeout = 10_000
             return try {
-                conn.inputStream.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.RGB_565 }) }
+                conn.inputStream.use { it.readBytes() }
             } finally {
                 conn.disconnect()
             }
         }
+
+        /** The YouTube video's own picture; the platform cuts out the square in its middle. */
+        fun youTubeThumb(videoId: String) = "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
 
         private fun get(url: String): String {
             val conn = URL(url).openConnection() as HttpURLConnection
@@ -169,12 +189,6 @@ class AndroidOnline : Online {
             return url
         }
 
-        /** The YouTube video's own picture, cut to the square in its middle (where the cover sits). */
-        fun youTubeArt(videoId: String): Bitmap? {
-            val b = image("https://i.ytimg.com/vi/$videoId/hqdefault.jpg") ?: return null
-            val side = minOf(b.width, b.height * 3 / 4)
-            return Bitmap.createBitmap(b, (b.width - side) / 2, (b.height - side) / 2, side, side)
-        }
 
         private fun same(a: String, b: String): Boolean {
             val x = norm(a); val y = norm(b)
