@@ -14,6 +14,10 @@ It plays songs from the web and from your phone, learns what you like, and gives
   <img src="docs/screens/sound.png" width="24%" alt="Sound settings">
 </p>
 
+**On a tablet**, MYNA switches to a sidebar and a full-width player bar:
+
+<img src="docs/screens/tablet-home.png" width="100%" alt="MYNA on a tablet">
+
 ## What it does
 
 - **Home:** jump back in, your listening time this week, songs on repeat and recently played.
@@ -22,14 +26,15 @@ It plays songs from the web and from your phone, learns what you like, and gives
 - **Now Playing:** crossfade, synced lyrics, queue, a sleep timer and the output device.
 - **Sound:** spaces (Studio, Stage, Big Hall, Headset), an equaliser and Clear Bass. The spaces run inside MYNA's own player, so they work on any phone and any speaker.
 - **Lock screen:** media controls in the notification. Tap the art and it fills the lock screen without unlocking the phone.
-- **Library:** liked songs, playlists, and the songs on your phone.
+- **Library:** liked songs, playlists, songs on your phone, and online songs you add with ⋯ › Add to library.
+- **Updates itself:** MYNA checks GitHub once a day. When a new version is out, a lime banner on Home installs it in one tap.
 
 ## Install
 
 Download the APK from [Releases](../../releases) and open it on your phone.
 Android asks once to allow installs from your browser or file app.
 
-Needs Android 8.0 or newer.
+Needs Android 8.0 or newer. After that, MYNA updates itself.
 
 ## Build
 

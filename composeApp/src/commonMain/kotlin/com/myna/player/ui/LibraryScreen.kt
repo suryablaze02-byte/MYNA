@@ -1,5 +1,6 @@
 package com.myna.player.ui
 
+import com.myna.player.online
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -334,6 +335,7 @@ internal fun SongMenu(app: AppCtx, t: Track, current: Boolean, playlist: String?
                 MenuItem("New playlist…") { close(); naming = true }
             } else {
                 MenuItem(if (app.library.likes.has(t)) "Unlike" else "Like") { app.library.likes.toggle(t); close() }
+                if (t.online) MenuItem(if (app.library.saved.has(t)) "Remove from library" else "Add to library") { app.library.toggleSaved(t); close() }
                 MenuItem("Add to playlist…") { pick = true }
                 if (t.album.isNotBlank()) MenuItem("Go to album") { close(); app.nav.push(Page.AlbumP(t.albumKey)) }
                 MenuItem("Go to artist") { close(); app.nav.push(Page.ArtistP(t.artist)) }

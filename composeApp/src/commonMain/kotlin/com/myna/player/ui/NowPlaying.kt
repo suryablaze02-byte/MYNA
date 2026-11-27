@@ -1,5 +1,6 @@
 package com.myna.player.ui
 
+import com.myna.player.online
 import kotlin.math.roundToInt
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -129,6 +130,7 @@ private fun MoreMenu(app: AppCtx) {
         HdrBtn(Ic.more) { open = true }
         DropdownMenu(open, { open = false }) {
             fun go(p: Page) { open = false; app.nav.npPage = 0; app.nav.push(p) }
+            if (t.online) MenuItem(if (app.library.saved.has(t)) "Remove from library" else "Add to library") { open = false; app.library.toggleSaved(t) }
             if (t.album.isNotBlank()) MenuItem("Go to album") { go(Page.AlbumP(t.albumKey)) }
             MenuItem("Go to artist") { go(Page.ArtistP(t.artist)) }
             MenuItem("Sound") { go(Page.Set(6)) }

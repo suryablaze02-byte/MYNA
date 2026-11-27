@@ -160,6 +160,7 @@ class AndroidPlatform(private val ctx: Context) : Platform {
     override fun getStr(key: String, def: String) = prefs.getString(key, def) ?: def
     override fun putStr(key: String, value: String) = prefs.edit().putString(key, value).apply()
     override val online: Online = AndroidOnline()
+    override val updater: AndroidUpdates by lazy { AndroidUpdates(ctx) }
     override fun nowMs() = System.currentTimeMillis()
     override fun monthOf(ms: Long) = Calendar.getInstance().apply { timeInMillis = ms }.let { it.get(Calendar.YEAR) * 12 + it.get(Calendar.MONTH) }
 

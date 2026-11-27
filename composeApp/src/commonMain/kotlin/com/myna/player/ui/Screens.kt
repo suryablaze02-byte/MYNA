@@ -84,7 +84,7 @@ internal fun EmptyLibrary(app: AppCtx) {
         if (!phone) {
             Txt("Songs on this phone are hidden", 20, FontWeight.ExtraBold, lines = 2)
             Spacer(Modifier.height(6.dp))
-            Txt("MYNA is playing online music only. Find new songs in Discover and Search.", 14, color = p.sub, lines = 3)
+            Txt("Find songs in Discover and Search, then tap ⋯ › Add to library to keep them here.", 14, color = p.sub, lines = 3)
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ActionTile(Ic.compass, "Discover", true) { app.nav.go(Page.Discover) }
@@ -145,6 +145,7 @@ fun HomeScreen(app: AppCtx) {
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { Header("Home", greet, app, gear = true) }
+        item { UpdateTile(app, banner = true) }
         if (tracks.isEmpty() && liked.isEmpty() && recent.isEmpty()) {
             item { EmptyLibrary(app) }
             return@LazyColumn

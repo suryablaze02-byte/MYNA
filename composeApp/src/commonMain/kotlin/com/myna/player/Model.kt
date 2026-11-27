@@ -65,6 +65,8 @@ interface Platform {
     fun putStr(key: String, value: String) {}
     /** Online music (YouTube Music, Spotify and Apple Music lists), or null where it isn't built yet. */
     val online: Online? get() = null
+    /** In-app updates from GitHub, or null where there are none. */
+    val updater: Updater? get() = null
     fun nowMs(): Long = 0
     /** Year * 12 + month (0-11) of a time, for Your stats. */
     fun monthOf(ms: Long): Int = 0
@@ -117,20 +119,25 @@ class Library(private val platform: Platform, private val scope: CoroutineScope,
     /** The songs the app shows, after the Library settings (phone songs, short clips, folders, duplicates). */
     val tracks: StateFlow<List<Track>> = _visible.asStateFlow()
     val likes = TrackStore(platform, "liked")
+    /** Online songs the user added to their library. */
+    val saved = TrackStore(platform, "saved")
     val recent = TrackStore(platform, "recent", 200)
     val playlists = Playlists(platform)
     /** Every song MYNA knows: the library plus liked and recently played ones (which may be online). */
-    fun known(lib: List<Track>): List<Track> = (lib + likes.tracks + recent.tracks).distinctBy { it.id }
+    fun known(lib: List<Track>): List<Track> = (lib + saved.tracks + likes.tracks + recent.tracks).distinctBy { it.id }
     var lastScan: Long = platform.getStr("lastScan", "0").toLongOrNull() ?: 0
         private set
 
     /** Runs again after any Library setting changes. */
     fun refilter() {
-        if (!prefs.phoneSongs.on) { _visible.value = emptyList(); return }
+        if (!prefs.phoneSongs.on) { _visible.value = saved.tracks; return }
         var t = _tracks.value.filter { (!prefs.hideShort.on || it.durationMs >= 30_000) && it.folder !in prefs.excluded }
         if (prefs.merge.on) t = t.distinctBy { "${it.title.lowercase()}|${it.artist.lowercase()}|${it.durationMs / 3000}" }
-        _visible.value = t
+        _visible.value = (t + saved.tracks).distinctBy { it.id }
     }
+
+    /** Adds an online song to the library, or takes it out again. */
+    fun toggleSaved(t: Track) { saved.toggle(t); refilter() }
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
     val art = ArtCache(platform)

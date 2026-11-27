@@ -1,5 +1,7 @@
 package com.myna.player.ui
 
+import androidx.compose.foundation.shape.CircleShape
+import com.myna.player.Update
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +38,8 @@ import com.myna.player.Prefs
 import com.myna.player.fmtTime
 import kotlin.math.roundToInt
 
-private const val VERSION = "1.0"
+private const val VERSION = "1.1.0"
+private val AppCtx.version get() = platform.updater?.version ?: VERSION
 private val THEMES = listOf("System", "Light", "Dark")
 private val ANIM = listOf("On", "Wi-Fi only", "Off")
 private val SPACES = listOf(
@@ -68,9 +71,10 @@ fun SettingsScreen(app: AppCtx) {
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Txt("MYNA $VERSION", 16, FontWeight.ExtraBold)
+                        val ready = app.platform.updater?.state?.collectAsState()?.value is Update.Ready
+                        Txt("MYNA ${app.version}", 16, FontWeight.ExtraBold)
                         Txt(
-                            if (scanning) "Scanning…" else "${tracks.size} songs · ${app.library.likes.tracks.size} liked · up to date",
+                            if (scanning) "Scanning…" else "${tracks.size} song${if (tracks.size == 1) "" else "s"} · ${app.library.likes.tracks.size} liked · ${if (ready) "update ready" else "up to date"}",
                             12, FontWeight.SemiBold, p.sub,
                         )
                     }
@@ -94,7 +98,7 @@ fun SettingsScreen(app: AppCtx) {
         item {
             Group(
                 { HubRow(Ic.chart, "Your stats", "${app.library.history.rows.size} plays", go(4)) },
-                { HubRow(Ic.info, "About", VERSION, go(5)) },
+                { HubRow(Ic.info, "About", app.version, go(5)) },
             )
         }
     }
@@ -382,10 +386,11 @@ private fun LazyListScope.about(app: AppCtx) {
                 MynaMark(46.dp, line = Color.White)
             }
             Spacer(Modifier.height(12.dp))
-            Txt("MYNA $VERSION", 22, FontWeight.ExtraBold)
+            Txt("MYNA ${app.version}", 22, FontWeight.ExtraBold)
             Txt("Your music. Smooth fades. No ads, no accounts.", 14, color = p.sub, lines = 2)
         }
     }
+    item { UpdateTile(app) }
     item {
         val p = LocalPal.current
         Tile(Modifier.fillMaxWidth()) {
@@ -396,6 +401,61 @@ private fun LazyListScope.about(app: AppCtx) {
 }
 
 // ---------------------------------------------------------------- pieces
+
+/** Updates from GitHub: a tile in About, and a lime [banner] on Home while one is waiting. */
+@Composable
+internal fun UpdateTile(app: AppCtx, banner: Boolean = false) {
+    val u = app.platform.updater ?: return
+    val s by u.state.collectAsState()
+    if (banner && (s == Update.Idle || s == Update.Checking || s == Update.UpToDate || s is Update.Failed)) return
+    val p = LocalPal.current
+    val (title, sub) = when (val x = s) {
+        Update.Idle -> "Updates" to "Tap to check for a new version."
+        Update.Checking -> "Checking for updates…" to "Looking on GitHub."
+        Update.UpToDate -> "MYNA is up to date" to "You have the latest version, ${u.version}."
+        is Update.Ready -> "MYNA ${x.version} is ready" to x.notes.joinToString(" · ").ifEmpty { "A new version is out." }
+        is Update.NeedsPermission -> "Allow MYNA to install updates" to "Turn on “Allow from this source”, then come back."
+        is Update.Downloading -> "Downloading ${x.version}… ${x.percent}%" to "Tap to stop."
+        is Update.Installing -> "Installing ${x.version}" to "Confirm on the screen Android shows."
+        is Update.Failed -> "The update didn't work" to x.reason
+    }
+    val action = when (s) {
+        is Update.Ready -> "Update"
+        is Update.NeedsPermission -> "Allow"
+        Update.Idle, Update.UpToDate, is Update.Failed -> "Check"
+        else -> null
+    }
+    val click = {
+        when (s) {
+            is Update.Ready -> u.install()
+            is Update.NeedsPermission -> u.allowInstalls()
+            is Update.Downloading -> u.cancel()
+            Update.Checking, is Update.Installing -> {}
+            else -> u.check()
+        }
+    }
+    val ink = if (banner) OnLime else p.ink
+    Tile(Modifier.fillMaxWidth(), color = if (banner) Lime else p.tile, onClick = click) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Txt(title, 16, FontWeight.ExtraBold, ink)
+                Txt(sub, 13, FontWeight.SemiBold, if (banner) OnLime.copy(alpha = 0.7f) else p.sub, lines = 3)
+            }
+            if (action != null) {
+                Spacer(Modifier.width(10.dp))
+                Box(Modifier.clip(CircleShape).background(if (banner) OnLime else Lime).padding(horizontal = 18.dp, vertical = 10.dp)) {
+                    Txt(action, 14, FontWeight.ExtraBold, if (banner) Lime else OnLime)
+                }
+            }
+        }
+        (s as? Update.Downloading)?.let { d ->
+            Spacer(Modifier.height(10.dp))
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(ink.copy(alpha = 0.15f))) {
+                Box(Modifier.fillMaxWidth(d.percent / 100f).fillMaxHeight().background(ink))
+            }
+        }
+    }
+}
 
 /** A setting with a big value on the right and a slider, e.g. Crossfade "6 s". [ticks] adds 0..max numbers. */
 @Composable

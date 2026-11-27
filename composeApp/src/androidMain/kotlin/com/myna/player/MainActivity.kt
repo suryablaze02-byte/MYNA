@@ -57,6 +57,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Back from Android's "Install unknown apps" switch: carry on with the update.
+    override fun onResume() { super.onResume(); AndroidUpdates.current?.resume() }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra("np", false)) nav.nowPlaying = true
