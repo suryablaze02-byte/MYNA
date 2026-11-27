@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MYNA — logo concepts</title>
+<style>
+:root{--tray:#EDEDF0;--ink:#111;--lime:#C6F432}
+*{box-sizing:border-box;margin:0}
+body{background:var(--tray);font-family:Inter,"Segoe UI",system-ui,sans-serif;color:var(--ink);padding:32px}
+h1{font-size:34px;font-weight:800;letter-spacing:-.04em}
+h1 b{color:#5b7f00}
+.lead{max-width:760px;margin:8px 0 24px;font-size:15px;line-height:1.5;color:#444}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+.card{background:#fff;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px;position:relative}
+.card.pick{outline:3px solid var(--lime)}
+.new{font-size:11px;background:#111;color:#C6F432;padding:2px 8px;border-radius:99px;vertical-align:middle;margin-left:4px}
+.badge{position:absolute;top:16px;right:16px;background:var(--lime);font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px}
+.name{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.idea{font-size:14px;line-height:1.45;color:#555}
+.hero{background:var(--tray);border-radius:16px;height:200px;display:grid;place-items:center}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ic{border-radius:22%;display:grid;place-items:center}
+.ic svg{width:72%;height:72%}
+.L{background:#fff;color:var(--ink);--acc:var(--lime);--bg:#fff;box-shadow:0 0 0 1px #ddd}
+.D{background:var(--ink);color:#fff;--acc:var(--lime);--bg:var(--ink)}
+.G{background:var(--lime);color:var(--ink);--acc:#fff;--bg:var(--lime)}
+.hero{color:var(--ink);--acc:var(--lime);--bg:var(--tray)}
+.lock{display:flex;align-items:center;gap:8px;color:var(--ink);--acc:var(--lime);--bg:#fff}
+.lock.dk{background:var(--ink);color:#fff;--bg:var(--ink);padding:8px 14px;border-radius:12px}
+.wm{font-weight:800;font-size:26px;letter-spacing:-.05em}
+.wm i{font-style:normal;color:var(--lime)}
+.lock:not(.dk) .wm i{color:#7fa600}
+.lbl{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.08em}
+/* mark parts */
+.k{fill:currentColor}.k2{fill:currentColor;opacity:.25}.k3{fill:currentColor;opacity:.6}
+.a{fill:var(--acc)}.ar{stroke:var(--acc);stroke-width:6;stroke-linejoin:round}
+.p{fill:var(--bg)}
+.s{fill:none;stroke:currentColor;stroke-width:12;stroke-linecap:round;stroke-linejoin:round}
+.sa{fill:none;stroke:var(--acc);stroke-width:6;stroke-linecap:round}
+/* motion preview: the mark "sings" on hover */
+@media (prefers-reduced-motion:no-preference){
+ .hero:hover .sing{animation:sing .9s ease-in-out infinite alternate}
+ .hero:hover .sing:nth-child(2n){animation-delay:.2s}
+}
+@keyframes sing{from{opacity:.25}to{opacity:1}}
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <!-- A · Play-beak -->
+ <symbol id="A" viewBox="0 0 100 100">
+  <circle class="k" cx="42" cy="54" r="28"/>
+  <polygon class="a ar" points="67,42 87,54 67,66"/>
+  <circle class="a" cx="50" cy="45" r="8"/>
+  <circle class="k" cx="52" cy="45" r="3.6"/>
+ </symbol>
+ <!-- B · Crossfade -->
+ <symbol id="B" viewBox="0 0 100 100">
+  <clipPath id="cB"><circle cx="36" cy="50" r="26"/></clipPath>
+  <circle class="k2" cx="36" cy="50" r="26"/>
+  <circle class="k" cx="60" cy="50" r="26"/>
+  <circle class="a" cx="60" cy="50" r="26" clip-path="url(#cB)"/>
+  <polygon class="a ar" points="88,44 97,50 88,56" style="stroke-width:4"/>
+  <circle class="p" cx="71" cy="42" r="3.8"/>
+ </symbol>
+ <!-- C · Waveform -->
+ <symbol id="C" viewBox="0 0 100 100">
+  <rect class="k sing" x="6"  y="52" width="8" height="12" rx="4"/>
+  <rect class="k sing" x="18" y="44" width="8" height="28" rx="4"/>
+  <rect class="a sing" x="30" y="36" width="8" height="44" rx="4"/>
+  <rect class="k sing" x="42" y="46" width="8" height="24" rx="4"/>
+  <circle class="k" cx="70" cy="50" r="17"/>
+  <polygon class="a ar" points="87,43 96,50 87,57" style="stroke-width:4"/>
+  <circle class="a" cx="75" cy="45" r="4.5"/>
+ </symbol>
+ <!-- D · Echo -->
+ <symbol id="D" viewBox="0 0 100 100">
+  <circle class="k" cx="30" cy="54" r="22"/>
+  <polygon class="a ar" points="50,46 62,54 50,62"/>
+  <circle class="a" cx="36" cy="47" r="6"/>
+  <circle class="k" cx="37.5" cy="47" r="2.6"/>
+  <path class="sa sing" d="M71 43.3A14 14 0 0 1 71 64.7"/>
+  <path class="sa sing" d="M78.7 34.1A26 26 0 0 1 78.7 73.9"/>
+ </symbol>
+ <!-- E · Talker -->
+ <symbol id="E" viewBox="0 0 100 100">
+  <rect class="k" x="10" y="16" width="68" height="58" rx="29"/>
+  <polygon class="k" points="16,60 10,88 38,70"/>
+  <polygon class="a ar" points="77,36 93,45 77,54" style="stroke-width:5"/>
+  <circle class="p" cx="60" cy="37" r="6"/>
+  <circle class="k" cx="61.5" cy="37" r="2.6"/>
+  <rect class="a sing" x="24" y="44" width="6" height="12" rx="3"/>
+  <rect class="a sing" x="34" y="39" width="6" height="22" rx="3"/>
+  <rect class="a sing" x="44" y="45" width="6" height="10" rx="3"/>
+ </symbol>
+ <!-- F · M-bird monogram -->
+ <symbol id="F" viewBox="0 0 100 100">
+  <path class="s" d="M16 80V52a14 14 0 0 1 28 0V80M44 52a14 14 0 0 1 28 0V80"/>
+  <polygon class="a ar" points="80,42 93,50 80,58" style="stroke-width:4"/>
+  <circle class="p" cx="66" cy="44" r="3"/>
+ </symbol>
+ <!-- G · Note-bird -->
+ <symbol id="G" viewBox="0 0 100 100">
+  <rect class="k" x="60" y="12" width="8" height="56" rx="4"/>
+  <path class="a" d="M64 12c14 4 24 12 24 28c-6-8-14-11-24-11z"/>
+  <circle class="k" cx="44" cy="68" r="22"/>
+  <polygon class="a ar" points="66,70 80,77 66,84" style="stroke-width:4"/>
+  <circle class="a" cx="50" cy="62" r="6"/>
+  <circle class="k" cx="51.5" cy="62" r="2.6"/>
+ </symbol>
+ <!-- H · Origami -->
+ <symbol id="H" viewBox="0 0 100 100">
+  <polygon class="k" points="18,72 48,18 60,62"/>
+  <polygon class="k3" points="48,18 78,42 60,62"/>
+  <polygon class="k2" points="18,72 60,62 40,90"/>
+  <polygon class="a" points="78,42 96,50 60,62"/>
+  <circle class="p" cx="58" cy="40" r="3.6"/>
+ </symbol>
+ <!-- I · Spark -->
+ <symbol id="I" viewBox="0 0 100 100">
+  <circle class="k" cx="42" cy="54" r="28"/>
+  <polygon class="a ar" points="67,42 87,54 67,66"/>
+  <path class="a sing" d="M52 32Q54 42 64 44Q54 46 52 56Q50 46 40 44Q50 42 52 32Z"/>
+ </symbol>
+ <!-- J · Vinyl -->
+ <symbol id="J" viewBox="0 0 100 100">
+  <circle class="k" cx="42" cy="52" r="30"/>
+  <circle cx="42" cy="52" r="23" fill="none" style="stroke:var(--bg);stroke-width:1.4;opacity:.45"/>
+  <circle cx="42" cy="52" r="17" fill="none" style="stroke:var(--bg);stroke-width:1.4;opacity:.45"/>
+  <circle class="a" cx="42" cy="52" r="10"/>
+  <circle class="k" cx="42" cy="52" r="2.6"/>
+  <polygon class="a ar" points="70,42 90,52 70,62"/>
+ </symbol>
+ <!-- K · Headphones -->
+ <symbol id="K" viewBox="0 0 100 100">
+  <circle class="k" cx="46" cy="58" r="26"/>
+  <path class="sa" d="M36 50C34 16 74 14 76 44" style="stroke-width:7"/>
+  <rect class="a" x="28" y="46" width="14" height="24" rx="7"/>
+  <polygon class="a ar" points="72,52 88,60 72,68" style="stroke-width:5"/>
+  <circle class="p" cx="60" cy="50" r="3.8"/>
+ </symbol>
+ <!-- L · Bauhaus -->
+ <symbol id="L" viewBox="0 0 100 100">
+  <path class="k" d="M12 52A40 40 0 0 1 52 12V52Z"/>
+  <path class="k3" d="M12 52A40 40 0 0 0 52 92V52Z"/>
+  <polygon class="a" points="52,26 90,40 52,52"/>
+  <circle class="a sing" cx="72" cy="72" r="14"/>
+  <circle class="p" cx="38" cy="38" r="5"/>
+ </symbol>
+ <!-- M · Monoline -->
+ <symbol id="M" viewBox="0 0 100 100">
+  <path class="s" d="M22 84C16 52 30 28 54 28C70 28 78 40 78 52C78 68 64 78 48 76" style="stroke-width:8"/>
+  <polygon class="a ar" points="80,45 93,52 80,59" style="stroke-width:4"/>
+  <circle class="a" cx="60" cy="46" r="5"/>
+ </symbol>
+</svg>
+
+<h1>myna<b>.</b> — logo concepts</h1>
+<p class="lead">Myna in Telugu is a bird known for its voice and its intelligence. The real common myna has a <b>yellow beak and a yellow patch around the eye</b>, so Bento lime becomes the beak and eye in every concept. All are flat geometry (circles, one triangle, rounded bars): they stay sharp at 18&nbsp;px and work on white, black and lime. Hover a big mark to see how it would “sing” as the app's loading or now-playing animation.</p>
+
+<div class="grid" id="g"></div>
+
+<script>
+const C=[
+ ["A","Play-beak","Round head with a play-button beak. Bird and music in one shape. Reads clearly as a small icon.",1],
+ ["B","Crossfade","Two songs overlap, the lime lens is the moment they blend: MYNA's one big feature. The front circle is the bird."],
+ ["C","Waveform","The bird's voice trails behind it as sound bars. The lime bar can move with the music."],
+ ["D","Echo","The bird sings and the sound arcs come back: voice and mimicry. The arcs can pulse while a song plays."],
+ ["E","Talker","The head is a speech bubble, with a voice meter inside. Most playful, a bit busier at tiny sizes."],
+ ["F","M-bird","A lowercase m whose second arch turns into the bird's head. A letter mark for “clever”. Thin at 18 px."],
+ ["G","Note-bird","The head of a musical note is the bird; the lime flag is its crest. Music first, bird second.",0,1],
+ ["H","Origami","Folded from four triangles: sharp, clever, crafted. The intelligence angle.",0,1],
+ ["I","Spark","Play-beak head, but the eye is a lime spark: the smart bird. Spark can twinkle while loading.",0,1],
+ ["J","Vinyl","The head is a record with grooves; the label is the eye, the beak points to “play”.",0,1],
+ ["K","Headphones","The bird wears lime headphones. Friendliest and most obviously a music app.",0,1],
+ ["L","Bauhaus","Two quarter-circles, a beak wedge and a lime note. Poster-like, very modern.",0,1],
+ ["M","Monoline","One continuous stroke draws the head. Lightest and most elegant; thin at tiny sizes.",0,1],
+];
+const use=(id)=>`<svg viewBox="0 0 100 100" role="img" aria-label="MYNA logo"><use href="#${id}"/></svg>`;
+document.getElementById('g').innerHTML=C.map(([id,n,t,pick,nw])=>`
+<div class="card${pick?' pick':''}">${pick?'<span class="badge">My pick</span>':''}
+ <div><div class="name">${id} · ${n}${nw?' <span class="new">new</span>':''}</div><div class="idea">${t}</div></div>
+ <div class="hero"><svg viewBox="0 0 100 100" width="150" height="150" role="img" aria-label="${n} mark"><use href="#${id}"/></svg></div>
+ <div class="lbl">App icon · light · dark · lime</div>
+ <div class="row">
+  <div class="ic L" style="width:72px;height:72px">${use(id)}</div>
+  <div class="ic D" style="width:72px;height:72px">${use(id)}</div>
+  <div class="ic G" style="width:72px;height:72px">${use(id)}</div>
+  <div class="ic D" style="width:40px;height:40px">${use(id)}</div>
+  <div class="ic D" style="width:28px;height:28px">${use(id)}</div>
+  <div class="ic L" style="width:18px;height:18px;border-radius:5px">${use(id)}</div>
+ </div>
+ <div class="lbl">With wordmark</div>
+ <div class="row">
+  <div class="lock"><svg viewBox="0 0 100 100" width="34" height="34"><use href="#${id}"/></svg><span class="wm">myna<i>.</i></span></div>
+  <div class="lock dk"><svg viewBox="0 0 100 100" width="30" height="30"><use href="#${id}"/></svg><span class="wm" style="font-size:22px">myna<i>.</i></span></div>
+ </div>
+</div>`).join('');
+</script>
+</body></html>

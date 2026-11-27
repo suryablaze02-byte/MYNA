@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MYNA — logo M colour options</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#EDEDF0;font-family:Inter,"Segoe UI",system-ui,sans-serif;color:#111;padding:32px}
+h1{font-size:32px;font-weight:800;letter-spacing:-.04em}
+.lead{margin:6px 0 24px;color:#555;font-size:15px}
+.pal{background:#fff;border-radius:20px;padding:20px;margin-bottom:16px}
+.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.pname{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.why{color:#666;font-size:14px}
+.sw{display:flex;gap:6px;margin-left:auto}
+.sw span{font:600 11px ui-monospace,Consolas,monospace;padding:6px 8px;border-radius:8px;border:1px solid #0001}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mode{border-radius:16px;padding:18px;display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center;background:var(--bg);color:var(--ink)}
+.tag{font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.6;margin-bottom:10px}
+.hero{width:150px;height:150px;border-radius:18px;background:var(--tile);display:grid;place-items:center}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.ic{border-radius:22%;display:grid;place-items:center;background:var(--tile);color:var(--ink);--acc:var(--acc0)}
+.ic.fill{background:var(--acc0);color:var(--onacc);--acc:var(--onacc)}
+.ic.fill .mk{color:var(--onacc);--acc:var(--onacc)}
+.ic svg{width:72%;height:72%}
+.wm{font-weight:800;font-size:28px;letter-spacing:-.05em}
+.wm i{font-style:normal;color:var(--acc0)}
+.lock{display:flex;gap:8px;align-items:center}
+.mini{display:flex;align-items:center;gap:10px;background:var(--tile);border-radius:14px;padding:8px 10px 8px 8px;margin-top:12px;max-width:280px}
+.cov{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--acc0),var(--ink));opacity:.9}
+.mt{flex:1;font-size:13px;font-weight:700;line-height:1.2}.mt small{display:block;font-weight:500;opacity:.6}
+.pb{width:34px;height:34px;border-radius:50%;background:var(--acc0);display:grid;place-items:center}
+.pb svg{width:14px;height:14px;fill:var(--onacc)}
+/* mark */
+.mk{color:var(--ink);--acc:var(--acc0)}
+.s{fill:none;stroke:currentColor;stroke-width:var(--sw,8);stroke-linecap:round;stroke-linejoin:round}
+.a{fill:var(--acc);stroke:var(--acc);stroke-width:4;stroke-linejoin:round}
+.ic.small{--sw:11}
+@media(max-width:900px){.modes{grid-template-columns:1fr}}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="M" viewBox="0 0 100 100">
+  <path class="s" d="M22 84C16 52 30 28 54 28C70 28 78 40 78 52C78 68 64 78 48 76"/>
+  <polygon class="a" points="80,45 93,52 80,59"/>
+  <circle class="a" cx="60" cy="46" r="3.6"/>
+ </symbol>
+</svg>
+
+<h1>Logo M · Monoline — 4 colour options</h1>
+<p class="lead">Same mark in each palette, in light and dark mode: big mark, app icons (plain and filled), small sizes, wordmark and a mini-player to show the colour in use.</p>
+<div id="p"></div>
+
+<script>
+// name, why, light{bg,tile,ink,acc,onacc}, dark{...}
+const P=[
+ ["Lime","Bento as it is now. Fresh, techy, loud accent.",
+  {bg:"#EDEDF0",tile:"#FFFFFF",ink:"#111111",acc:"#C6F432",on:"#111111"},
+  {bg:"#0B0B0D",tile:"#1C1C1F",ink:"#F4F4F5",acc:"#C6F432",on:"#111111"}],
+ ["Saffron","The real myna's yellow beak and eye. Warm, Indian, joyful.",
+  {bg:"#F6EFE4",tile:"#FFFBF5",ink:"#2B1A0E",acc:"#FFB000",on:"#2B1A0E"},
+  {bg:"#140E08",tile:"#241A10",ink:"#FFEBCC",acc:"#FFB000",on:"#2B1A0E"}],
+ ["Indigo","Calm night sky. Premium and focused, good for late listening.",
+  {bg:"#ECECF8",tile:"#FFFFFF",ink:"#1E1B4B",acc:"#6C63FF",on:"#FFFFFF"},
+  {bg:"#0D0C1F",tile:"#1A1838",ink:"#E8E6FF",acc:"#8F88FF",on:"#0D0C1F"}],
+ ["Coral","Soft and human, like a voice. Friendly, stands out on home screens.",
+  {bg:"#F7EDEA",tile:"#FFFAF8",ink:"#2A0F12",acc:"#FF5A4E",on:"#FFFFFF"},
+  {bg:"#170A0B",tile:"#2A1416",ink:"#FFE3DE",acc:"#FF6B5E",on:"#170A0B"}],
+];
+const m=(w,cls="")=>`<svg viewBox="0 0 100 100" width="${w}" height="${w}" class="mk ${cls}"><use href="#M"/></svg>`;
+const ic=(s,fill)=>`<div class="ic${fill?' fill':''}${s<40?' small':''}" style="width:${s}px;height:${s}px">${m(s)}</div>`;
+const vars=c=>`--bg:${c.bg};--tile:${c.tile};--ink:${c.ink};--acc0:${c.acc};--onacc:${c.on}`;
+const mode=(lbl,c)=>`<div class="mode" style="${vars(c)}">
+ <div class="hero">${m(120)}</div>
+ <div><div class="tag">${lbl}</div>
+  <div class="row">${ic(64)}${ic(64,1)}${ic(40)}${ic(28)}${ic(20)}</div>
+  <div class="lock">${m(36)}<span class="wm">myna<i>.</i></span></div>
+  <div class="mini"><div class="cov"></div><div class="mt">Blinding Lights<small>The Weeknd</small></div>
+   <div class="pb"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></div></div>
+ </div></div>`;
+document.getElementById('p').innerHTML=P.map(([n,w,L,D],i)=>`<div class="pal">
+ <div class="top"><span class="pname">${i+1} · ${n}</span><span class="why">${w}</span>
+  <div class="sw">${[L.ink,L.acc,D.bg,D.ink].map(h=>`<span style="background:${h};color:${['#111111','#2B1A0E','#1E1B4B','#2A0F12','#0B0B0D','#140E08','#0D0C1F','#170A0B'].includes(h)?'#fff':'#111'}">${h}</span>`).join('')}</div></div>
+ <div class="modes">${mode("Light mode",L)}${mode("Dark mode",D)}</div></div>`).join('');
+</script>
+</body></html>

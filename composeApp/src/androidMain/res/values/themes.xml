@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.Myna" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#EDEDF0</item>
+    </style>
+</resources>
