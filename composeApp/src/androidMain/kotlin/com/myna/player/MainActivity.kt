@@ -20,6 +20,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Phones stay upright; tablets (600 dp and wider) can turn.
+        if (resources.configuration.smallestScreenWidthDp < 600) requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         enableEdgeToEdge()
         if (intent?.getBooleanExtra("np", false) == true) nav.nowPlaying = true
         val app = application as MynaApplication

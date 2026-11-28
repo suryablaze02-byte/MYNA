@@ -33,6 +33,14 @@ class Prefs(private val p: Platform) {
     val clearBass = Pref("clearBass", 0)
     val lyricsDl = Pref("lyricsDl", 1)
 
+    /** Where Discover's charts come from: a code in [REGIONS], "" for Global. Starts as the device's country. */
+    var region by mutableStateOf(p.getStr("region", REGIONS.firstOrNull { it.first == p.country }?.first ?: ""))
+        private set
+
+    fun pickRegion(code: String) { region = code; p.putStr("region", code); storeCountry = code.ifEmpty { "US" } }
+
+    init { storeCountry = region.ifEmpty { "US" } }
+
     /** Folders (as the scan names them) whose songs are left out. */
     var excluded by mutableStateOf(p.getStr("excluded", "").split('\n').filter { it.isNotBlank() }.toSet())
         private set
@@ -81,6 +89,12 @@ class TrackStore(private val p: Platform, private val store: String, private val
     /** Adds [t] at the end, if it is not here yet (playlists keep the order songs were added). */
     fun add(t: Track) { if (!has(t)) { tracks = tracks + t; save() } }
     fun remove(t: Track) { tracks = tracks.filter { key(it) != key(t) }; save() }
+    /** Adds every song in [ts] not here yet, or with [on] false takes them all out (one save either way). */
+    fun setAll(ts: List<Track>, on: Boolean) {
+        val keys = ts.map(::key).toSet()
+        tracks = if (on) tracks + ts.filter { !has(it) }.distinctBy(::key) else tracks.filter { key(it) !in keys }
+        save()
+    }
     fun clear() { tracks = emptyList(); save() }
 
     private fun save() {

@@ -59,8 +59,8 @@ android {
         applicationId = "com.myna.player"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.2.1"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -87,7 +87,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "MYNA"
-            packageVersion = "1.2.0"
+            packageVersion = "1.2.1"
             description = "MYNA music player"
             vendor = "Surya"
             modules("java.net.http", "java.sql", "jdk.crypto.ec", "java.naming")

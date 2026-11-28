@@ -1,5 +1,6 @@
 package com.myna.player.ui
 
+import com.myna.player.REGIONS
 import com.myna.player.device
 import androidx.compose.foundation.shape.CircleShape
 import com.myna.player.Update
@@ -39,7 +40,7 @@ import com.myna.player.Prefs
 import com.myna.player.fmtTime
 import kotlin.math.roundToInt
 
-private const val VERSION = "1.2.0"
+private const val VERSION = "1.2.1"
 private val AppCtx.version get() = platform.updater?.version ?: VERSION
 private val THEMES = listOf("System", "Light", "Dark")
 private val ANIM = listOf("On", "Wi-Fi only", "Off")
@@ -93,6 +94,7 @@ fun SettingsScreen(app: AppCtx) {
             Group(
                 { HubRow(Ic.image, "Appearance", "${THEMES[pr.theme.v]} · Animated ${ANIM[pr.animCovers.v]}", go(1)) },
                 { HubRow(Ic.moon, "Sleep timer", sleepLabel(st.sleepLeftMs, st.sleepEndOfSong, st.sleepEndOfAlbum) ?: "Fade 30 s", go(3)) },
+                { HubRow(Ic.compass, "Region", REGIONS.first { it.first == pr.region }.second, go(7)) },
                 { HubRow(Ic.heart, "Liked songs", "${app.library.likes.tracks.size}") { app.nav.push(Page.ListP("liked")) } },
             )
         }
@@ -151,7 +153,7 @@ private fun HubRow(icon: ImageVector, name: String, value: String, onClick: () -
 
 @Composable
 fun SettingsPage(app: AppCtx, which: Int) {
-    val title = listOf("Playback", "Appearance", "Library", "Sleep timer", "Your stats", "About", "Sound")[which]
+    val title = listOf("Playback", "Appearance", "Library", "Sleep timer", "Your stats", "About", "Sound", "Region")[which]
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { Header(title, null, app, back = true) }
         when (which) {
@@ -161,6 +163,7 @@ fun SettingsPage(app: AppCtx, which: Int) {
             3 -> sleep(app)
             4 -> stats(app)
             6 -> sound(app)
+            7 -> regionSet(app)
             else -> about(app)
         }
     }
@@ -219,6 +222,26 @@ private fun LazyListScope.sound(app: AppCtx) {
                 Ico(Ic.chev, 18.dp, p.onBlock)
             }
         }
+    }
+}
+
+private fun LazyListScope.regionSet(app: AppCtx) {
+    val pr = app.library.prefs
+    item {
+        Txt("Discover shows this region's charts and hits. Album and artist pages use its music store.", 13, FontWeight.SemiBold, LocalPal.current.sub, lines = 3, modifier = Modifier.padding(horizontal = 4.dp))
+    }
+    item {
+        Group(*REGIONS.map { (code, name) ->
+            @Composable {
+                Row(
+                    Modifier.fillMaxWidth().clickable { if (pr.region != code) { pr.pickRegion(code); app.library.discover.refresh() } }.padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Txt(name, 15, FontWeight.Bold, modifier = Modifier.weight(1f))
+                    if (pr.region == code) Ico(Ic.check, 18.dp, LocalPal.current.ink)
+                }
+            }
+        }.toTypedArray())
     }
 }
 

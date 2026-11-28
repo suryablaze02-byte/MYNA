@@ -48,6 +48,7 @@ class MynaApplication : Application() {
 
 class AndroidPlatform(private val ctx: Context) : Platform {
     override val isDesktop = false
+    override val country: String = java.util.Locale.getDefault().country.ifEmpty { "US" }
     private val prefs = ctx.getSharedPreferences("myna", Context.MODE_PRIVATE)
 
     override suspend fun scan(): List<Track> = withContext(Dispatchers.IO) {

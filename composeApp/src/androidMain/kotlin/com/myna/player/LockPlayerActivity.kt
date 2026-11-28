@@ -59,6 +59,8 @@ import java.util.Locale
 class LockPlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Phones stay upright; tablets (600 dp and wider) can turn.
+        if (resources.configuration.smallestScreenWidthDp < 600) requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         if (!MediaControls.locked(this)) {
             startActivity(Intent(this, MainActivity::class.java).putExtra("np", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             finish()

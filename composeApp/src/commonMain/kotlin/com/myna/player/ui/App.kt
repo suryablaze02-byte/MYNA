@@ -64,6 +64,8 @@ sealed interface Page {
     data class ListP(val id: String) : Page
     /** An album found online (from an artist page or Search). */
     data class OnlineAlbumP(val album: com.myna.player.OnlineAlbum) : Page
+    /** A streamed song's album, looked up online when the page opens. */
+    data class SongAlbumP(val track: com.myna.player.Track) : Page
 }
 
 /** Screen stack plus the Now Playing sheet. [back] returns false when there is nothing left to close. */
@@ -79,6 +81,8 @@ class Nav {
     var mini by mutableStateOf(false)
     /** Windows: the queue panel on the right is open. */
     var queueOpen by mutableStateOf(false)
+    /** Windows: the lyrics panel beside the page. */
+    var lyricsOpen by mutableStateOf(false)
     var libTab by mutableIntStateOf(0)
     var songSort by mutableIntStateOf(0)
     var albumSort by mutableIntStateOf(0)
@@ -140,6 +144,7 @@ private fun PageContent(app: AppCtx) {
         is Page.ArtistP -> ArtistScreen(app, pg.name)
         is Page.ListP -> ListScreen(app, pg.id)
         is Page.OnlineAlbumP -> OnlineAlbumScreen(app, pg.album)
+        is Page.SongAlbumP -> SongAlbumScreen(app, pg.track)
     }
 }
 
@@ -217,6 +222,7 @@ private fun WideLayout(app: AppCtx) {
         Row(Modifier.weight(1f)) {
             Sidebar(app)
             Box(Modifier.weight(1f)) { PageContent(app) }
+            if (app.nav.lyricsOpen) LyricsPanel(app)
             if (app.nav.queueOpen) QueuePanel(app)
         }
         PlayerBar(app)
@@ -275,14 +281,37 @@ private fun PlayerBar(app: AppCtx) {
         }
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             t?.let { LikeBtn(app, it) }
+            if (app.platform.isDesktop) {
+                t?.let { SongMenu(app, it, false) }
+                IconBtn(Ic.lyr, if (app.nav.lyricsOpen) p.ink else p.sub) { app.nav.lyricsOpen = !app.nav.lyricsOpen; app.nav.queueOpen = false }
+            }
             FadeChip(app)
             if (app.platform.isDesktop) IconBtn(Ic.mini) { app.nav.mini = true }
             // The queue: a panel on Windows, Now Playing's queue page on tablets.
             IconBtn(Ic.queue) {
-                if (app.platform.isDesktop) app.nav.queueOpen = !app.nav.queueOpen
+                if (app.platform.isDesktop) { app.nav.queueOpen = !app.nav.queueOpen; app.nav.lyricsOpen = false }
                 else if (t != null) { app.nav.npPage = 2; app.nav.nowPlaying = true }
             }
         }
+    }
+}
+
+/** Windows: the playing song's lyrics beside the page. */
+@Composable
+private fun LyricsPanel(app: AppCtx) {
+    val p = LocalPal.current
+    val st by app.engine.state.collectAsState()
+    Column(Modifier.width(380.dp).fillMaxHeight().padding(top = 16.dp, end = 12.dp).clip(RoundedCornerShape(20.dp)).background(p.tile)) {
+        Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Txt("Lyrics", 18, FontWeight.ExtraBold)
+                st.current?.let { Txt(it.title, 12, color = p.sub) }
+            }
+            IconBtn(Ic.x) { app.nav.lyricsOpen = false }
+        }
+        val t = st.current
+        if (t == null) Txt("Nothing playing", 14, color = p.sub, modifier = Modifier.padding(18.dp))
+        else LyricsBox(app, rememberLyrics(app, t), Modifier.weight(1f).fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 10.dp))
     }
 }
 

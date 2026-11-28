@@ -78,6 +78,19 @@ class WebOnline : Online {
         }.getOrDefault(emptyList())
     }
 
+    override suspend fun albumOf(t: Track): OnlineAlbum? = withContext(Dispatchers.IO) {
+        runCatching {
+            val first = t.artist.substringBefore(',').substringBefore('&').trim()
+            val title = cleanTitle(t.title)
+            val hits = JSONObject(get("https://itunes.apple.com/search?media=music&entity=song&limit=15$STORE&term=" + java.net.URLEncoder.encode("$first $title", "UTF-8")))
+                .optJSONArray("results")?.objects().orEmpty()
+                .filter { same(it.optString("artistName"), first) && same(cleanTitle(it.optString("trackName")), title) }
+            // The album the song is tagged with, else a full album over a single.
+            (hits.firstOrNull { t.album.isNotBlank() && same(cleanTitle(it.optString("collectionName")), cleanTitle(t.album)) }
+                ?: hits.firstOrNull { !it.optString("collectionName").endsWith(" - Single") } ?: hits.firstOrNull())?.let { itAlbum(it, null) }
+        }.getOrNull()
+    }
+
     private fun itAlbum(a: JSONObject, artist: String?): OnlineAlbum {
         val raw = a.optString("collectionName")
         val kind = when { raw.endsWith(" - Single") -> "single"; raw.endsWith(" - EP") -> "ep"; else -> "album" }
@@ -116,8 +129,8 @@ class WebOnline : Online {
 
     companion object {
         private val pool = Executors.newSingleThreadExecutor()
-        /** The phone's own country store: Indian film soundtracks are in iTunes India, not the US one. */
-        private val STORE = "&country=" + java.util.Locale.getDefault().country.ifEmpty { "US" }
+        /** The chosen region's store: Indian film soundtracks are in iTunes India, not the US one. */
+        private val STORE get() = "&country=" + com.myna.player.storeCountry
         private val artists = java.util.concurrent.ConcurrentHashMap<String, OnlineArtist>()
         private const val PHONE_AGENT =
             "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"

@@ -10,7 +10,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /** A Spotify or Apple Music playlist MYNA knows: its songs are read from the public page and played from YouTube. */
-data class OnlineList(val source: String, val name: String, val ref: String, val tags: String = "")
+/** A service's playlist. [region] is the country it is for ("" = everywhere). */
+data class OnlineList(val source: String, val name: String, val ref: String, val tags: String = "", val region: String = "")
+
+/** The regions Discover can be tailored to: country code and name. "" is Global. */
+val REGIONS = listOf("IN" to "India", "US" to "United States", "GB" to "United Kingdom", "CA" to "Canada", "AU" to "Australia", "" to "Global")
 
 /** An album (or single / EP) found online. [kind] is "album", "single", "ep" or "compile". */
 data class OnlineAlbum(val id: String, val title: String, val artist: String, val year: Int, val cover: String, val kind: String) {
@@ -41,6 +45,8 @@ interface Online {
     suspend fun albums(query: String): List<OnlineAlbum> = emptyList()
     /** The songs on [a], in order. */
     suspend fun album(a: OnlineAlbum): List<Track> = emptyList()
+    /** The album [t] is on (its full album over a single, when there is one), or null. */
+    suspend fun albumOf(t: Track): OnlineAlbum? = null
     /** Starts finding the stream early, so the crossfade into this song isn't late. */
     fun prefetch(t: Track) {}
 }
@@ -74,20 +80,26 @@ object Catalogue {
     private const val SP = "Spotify"
     private const val AM = "Apple Music"
     val lists = listOf(
+        OnlineList(SP, "Top 50 - India", "37i9dQZEVXbLZ52XmnySJg", "india chart top", "IN"),
+        OnlineList(SP, "Top 50 - USA", "37i9dQZEVXbLRQDuF5jeBp", "usa us america chart top", "US"),
+        OnlineList(SP, "Top 50 - United Kingdom", "37i9dQZEVXbLnolsZ8PSNw", "uk britain chart top", "GB"),
+        OnlineList(SP, "Top 50 - Canada", "37i9dQZEVXbKj23U1GF4IR", "canada chart top", "CA"),
+        OnlineList(SP, "Top 50 - Australia", "37i9dQZEVXbJPcfkRz0wJ0", "australia chart top", "AU"),
+        OnlineList(SP, "Top 50 - Global", "37i9dQZEVXbMDoHDwVN2tF", "global chart top world"),
         OnlineList(SP, "Today's Top Hits", "37i9dQZF1DXcBWIGoYBM5M", "pop hits chart trending"),
         OnlineList(SP, "Viral Hits", "37i9dQZF1DX2L0iB23Enbq", "viral trending new"),
         OnlineList(SP, "New Music Friday", "37i9dQZF1DX4JAvHpjipBk", "new releases"),
-        OnlineList(SP, "Hot Hits Telugu", "37i9dQZF1DX6XE7HRLM75P", "telugu tollywood india"),
-        OnlineList(SP, "Hot Hits Tamil", "37i9dQZF1DX1i3hvzHpcQV", "tamil kollywood india"),
-        OnlineList(SP, "Bollywood Dance Music", "37i9dQZF1DX8xfQRRX1PDm", "bollywood hindi dance india"),
+        OnlineList(SP, "Hot Hits Telugu", "37i9dQZF1DX6XE7HRLM75P", "telugu tollywood india", "IN"),
+        OnlineList(SP, "Hot Hits Tamil", "37i9dQZF1DX1i3hvzHpcQV", "tamil kollywood india", "IN"),
+        OnlineList(SP, "Bollywood Dance Music", "37i9dQZF1DX8xfQRRX1PDm", "bollywood hindi dance india", "IN"),
         OnlineList(SP, "Dance Hits", "37i9dQZF1DX0BcQWzuB7ZO", "dance party edm club workout gym"),
         OnlineList(SP, "Chill Hits", "37i9dQZF1DX4WYpdgoIcn6", "chill relax calm focus study"),
         OnlineList(AM, "Today's Hits", "todays-hits/pl.f4d106fed2bd41149aaacabb233eb5eb", "pop hits chart trending"),
-        OnlineList(AM, "Top 100: India", "top-100-india/pl.c0e98d2423e54c39b3df955c24df3cc5", "india chart top"),
+        OnlineList(AM, "Top 100: India", "top-100-india/pl.c0e98d2423e54c39b3df955c24df3cc5", "india chart top", "IN"),
         OnlineList(AM, "Top 100: Global", "top-100-global/pl.d25f5d1181894928af76c85c967f8f31", "global chart top world"),
-        OnlineList(AM, "Telugu Hits", "telugu-hits/pl.1be89625ddd94a80a1dff804b41efd63", "telugu tollywood india"),
-        OnlineList(AM, "Tamil Hits", "tamil-hits/pl.c8d5311e407f42c89d0fce075b5aaa43", "tamil kollywood india"),
-        OnlineList(AM, "Bollywood Hits", "bollywood-hits/pl.d60caf02fcce4d7e9788fe01243b7c2c", "bollywood hindi india"),
+        OnlineList(AM, "Telugu Hits", "telugu-hits/pl.1be89625ddd94a80a1dff804b41efd63", "telugu tollywood india", "IN"),
+        OnlineList(AM, "Tamil Hits", "tamil-hits/pl.c8d5311e407f42c89d0fce075b5aaa43", "tamil kollywood india", "IN"),
+        OnlineList(AM, "Bollywood Hits", "bollywood-hits/pl.d60caf02fcce4d7e9788fe01243b7c2c", "bollywood hindi india", "IN"),
         OnlineList(AM, "Hip-Hop Hits", "hip-hop-hits/pl.87c7af5767764860a0e3368d0bef9a6f", "hip hop rap workout gym"),
         OnlineList(AM, "danceXL", "dancexl/pl.6bf4415b83ce4f3789614ac4c3675740", "dance party edm club"),
         OnlineList(AM, "Today's Chill", "todays-chill/pl.2bb29727dbc34a63936787297305c37c", "chill relax calm"),
@@ -164,7 +176,9 @@ class Discover(private val platform: Platform, private val library: Library, pri
         val yt = seeds.map { a ->
             async { runCatching { Shelf("Because you play $a", "YouTube Music", "Songs by and like $a", online.songs(a, 15).distinctBy { it.songKey }) }.getOrNull() }
         }
-        val lists = Catalogue.lists.map { l -> async { runCatching { l to online.list(l) }.getOrNull() } }
+        // Charts for the chosen region, plus the ones for everywhere.
+        val region = library.prefs.region
+        val lists = Catalogue.lists.filter { it.region.isEmpty() || it.region == region }.map { l -> async { runCatching { l to online.list(l) }.getOrNull() } }
 
         val ytShelves = yt.awaitAll().filterNotNull().filter { it.tracks.isNotEmpty() }
         val scored = lists.awaitAll().filterNotNull().filter { it.second.isNotEmpty() }.map { (l, ts) ->
@@ -173,10 +187,11 @@ class Discover(private val platform: Platform, private val library: Library, pri
             val sorted = one.sortedByDescending { yours(it) }
             Triple(l, n, sorted)
         }
-        // Per service: the playlists with most of your artists first, three each.
+        // Per service: the region's own charts first, then the playlists with most of your artists; three each.
+        val local = compareByDescending<Triple<OnlineList, Int, List<Track>>> { it.first.region.isNotEmpty() }.thenByDescending { it.second }
         val listShelves = scored.groupBy { it.first.source }.values.flatMap { group ->
-            group.sortedByDescending { it.second }.take(3)
-        }.sortedByDescending { it.second }.map { (l, n, ts) ->
+            group.sortedWith(local).take(3)
+        }.sortedWith(local).map { (l, n, ts) ->
             Shelf(l.name, l.source, if (n == 1) "1 song by an artist you play" else if (n > 0) "$n songs by artists you play" else "Popular right now", ts)
         }
 

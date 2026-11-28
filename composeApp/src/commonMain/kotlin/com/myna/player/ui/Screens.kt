@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -144,7 +145,9 @@ fun HomeScreen(app: AppCtx) {
     val topArtist = remember(recent) { hist.topArtists(1).firstOrNull() }
     val artistCover = recent.firstOrNull { it.artist == topArtist } ?: byKey.values.firstOrNull { it.artist == topArtist }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // On a wide window the page stays at most 1200 dp wide and sits in the middle, so tiles don't stretch.
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    LazyColumn(Modifier.fillMaxHeight().widthIn(max = 1200.dp), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(GAP(app))) {
         item { Header("Home", greet, app, gear = true) }
         item { UpdateTile(app, banner = true) }
         if (tracks.isEmpty() && liked.isEmpty() && recent.isEmpty()) {
@@ -152,43 +155,65 @@ fun HomeScreen(app: AppCtx) {
             return@LazyColumn
         }
         // Jump back in: Liked songs, or the whole library when nothing is liked yet.
-        item {
-            val list = liked.ifEmpty { tracks }
-            val name = if (liked.isNotEmpty()) "Liked songs" else "Your library"
-            val play = { if (list.isNotEmpty()) { app.engine.play(list, 0, from = name); app.nav.nowPlaying = true } }
-            Box(Modifier.fillMaxWidth().height(if (app.wide) 240.dp else 200.dp).clip(RoundedCornerShape(20.dp))
+        val list = liked.ifEmpty { tracks }
+        val name = if (liked.isNotEmpty()) "Liked songs" else "Your library"
+        val play = { if (list.isNotEmpty()) { app.engine.play(list, 0, from = name); app.nav.nowPlaying = true } }
+        val hero: @Composable (Modifier) -> Unit = { m ->
+            Box(m.clip(RoundedCornerShape(if (app.wide) 24.dp else 20.dp))
                 .clickable { if (liked.isNotEmpty()) { app.nav.push(Page.ListP("liked")) } else play() }) {
                 CoverFill(list.firstOrNull())
                 Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xB8000000)))))
-                Column(Modifier.align(Alignment.BottomStart).padding(14.dp).padding(end = 64.dp)) {
+                Column(Modifier.align(Alignment.BottomStart).padding(if (app.wide) 20.dp else 14.dp).padding(end = 64.dp)) {
                     Txt("JUMP BACK IN", 11, FontWeight.Bold, Color.White.copy(alpha = 0.85f))
-                    Txt(name, 22, FontWeight.ExtraBold, Color.White)
-                    Txt("${list.size} songs · ${fmtTotal(list.sumOf { it.durationMs })}", 12, color = Color.White.copy(alpha = 0.85f))
+                    Txt(name, if (app.wide) 30 else 22, FontWeight.ExtraBold, Color.White)
+                    Txt("${list.size} song${if (list.size == 1) "" else "s"} · ${fmtTotal(list.sumOf { it.durationMs })}", 12, color = Color.White.copy(alpha = 0.85f))
                 }
-                Box(Modifier.align(Alignment.BottomEnd).padding(12.dp)) { RoundBtn(Ic.play, 50.dp, Lime, OnLime) { play() } }
+                Box(Modifier.align(Alignment.BottomEnd).padding(if (app.wide) 16.dp else 12.dp)) { RoundBtn(Ic.play, 54.dp, Lime, OnLime) { play() } }
             }
         }
-        item {
-            Row(Modifier.fillMaxWidth().height(124.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Tile(Modifier.weight(1f).fillMaxHeight(), color = p.block, onClick = { app.nav.push(Page.Set(4)) }) {
-                    Txt("This week", 12, FontWeight.Bold, p.onBlock.copy(alpha = 0.7f))
-                    Spacer(Modifier.weight(1f))
-                    Txt(fmtListened(weekMs), 30, FontWeight.ExtraBold, if (p.dark) p.onBlock else Lime)
-                    Txt("listened", 12, FontWeight.Bold, p.onBlock.copy(alpha = 0.7f))
-                }
-                Tile(Modifier.weight(1f).fillMaxHeight(), color = p.soft, onClick = { if (onRepeat.isNotEmpty()) { app.engine.play(onRepeat, 0, from = "On repeat"); app.nav.nowPlaying = true } }) {
-                    Txt("On repeat", 12, FontWeight.Bold, p.ink.copy(alpha = 0.7f))
-                    Txt(if (onRepeat.isEmpty()) "Nothing yet" else "${onRepeat.size} song${if (onRepeat.size == 1) "" else "s"}", 17, FontWeight.ExtraBold)
-                    Spacer(Modifier.weight(1f))
-                    CoverStack(onRepeat.ifEmpty { recent }.take(3), p.soft)
-                }
+        val week: @Composable (Modifier) -> Unit = { m ->
+            Tile(m, color = p.block, onClick = { app.nav.push(Page.Set(4)) }) {
+                Txt("This week", 12, FontWeight.Bold, p.onBlock.copy(alpha = 0.7f))
+                Spacer(Modifier.weight(1f))
+                Txt(fmtListened(weekMs), 30, FontWeight.ExtraBold, if (p.dark) p.onBlock else Lime)
+                Txt("listened", 12, FontWeight.Bold, p.onBlock.copy(alpha = 0.7f))
             }
         }
-        if (lastAlbum != null || topArtist != null) item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        val repeat: @Composable (Modifier) -> Unit = { m ->
+            Tile(m, color = p.soft, onClick = { if (onRepeat.isNotEmpty()) { app.engine.play(onRepeat, 0, from = "On repeat"); app.nav.nowPlaying = true } }) {
+                Txt("On repeat", 12, FontWeight.Bold, p.ink.copy(alpha = 0.7f))
+                Txt(if (onRepeat.isEmpty()) "Nothing yet" else "${onRepeat.size} song${if (onRepeat.size == 1) "" else "s"}", 17, FontWeight.ExtraBold)
+                Spacer(Modifier.weight(1f))
+                CoverStack(onRepeat.ifEmpty { recent }.take(3), p.soft)
+            }
+        }
+        val shortcuts: @Composable () -> Unit = {
+            if (lastAlbum != null || topArtist != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GAP(app))) {
                 if (lastAlbum != null) ShortTile(lastAlbum, lastAlbum.album, "Album", p.tile, p.ink) { app.nav.push(Page.AlbumP(lastAlbum.albumKey)) }
                 if (topArtist != null) ShortTile(artistCover, topArtist, "Artist", p.block, p.onBlock) { app.nav.push(Page.ArtistP(topArtist)) }
             }
+        }
+        if (app.wide) item {
+            // Bento grid: the big Jump back in tile on the left, the small tiles in a 2 x 2 block beside it.
+            Row(Modifier.fillMaxWidth().height(300.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                hero(Modifier.weight(1.15f).fillMaxHeight())
+                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        week(Modifier.weight(1f).fillMaxHeight())
+                        repeat(Modifier.weight(1f).fillMaxHeight())
+                    }
+                    shortcuts()
+                }
+            }
+        } else {
+            item { hero(Modifier.fillMaxWidth().height(200.dp)) }
+            item {
+                Row(Modifier.fillMaxWidth().height(124.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    week(Modifier.weight(1f).fillMaxHeight())
+                    repeat(Modifier.weight(1f).fillMaxHeight())
+                }
+            }
+            item { shortcuts() }
         }
         if (recent.isNotEmpty()) {
             item { SectionHead("Recently played") }
@@ -201,7 +226,11 @@ fun HomeScreen(app: AppCtx) {
             }
         }
     }
+    }
 }
+
+/** Space between Home's tiles: roomier on a wide window. */
+private fun GAP(app: AppCtx) = if (app.wide) 16.dp else 10.dp
 
 private const val DAY = 86_400_000L
 

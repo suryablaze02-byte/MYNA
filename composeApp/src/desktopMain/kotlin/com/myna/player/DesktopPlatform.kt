@@ -19,6 +19,7 @@ import javax.swing.JFileChooser
 /** MYNA on Windows: songs from the Music folder, settings in %APPDATA%\MYNA, FFmpeg decks. */
 class DesktopPlatform : Platform {
     override val isDesktop = true
+    override val country: String = java.util.Locale.getDefault().country.ifEmpty { "US" }
 
     private val home = File(System.getenv("APPDATA") ?: System.getProperty("user.home"), "MYNA").apply { mkdirs() }
     private val file = File(home, "settings.properties")

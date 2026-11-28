@@ -28,10 +28,21 @@ data class Track(
 data class Album(val key: String, val title: String, val artist: String, val tracks: List<Track>)
 data class Artist(val name: String, val tracks: List<Track>)
 
-fun List<Track>.albums(): List<Album> = groupBy { it.albumKey }.map { (key, ts) ->
+/**
+ * Albums in a list of songs. A song without an album name isn't one, and neither is a single online song
+ * added on its own (an online album counts once two or more of its songs are in the library).
+ */
+fun List<Track>.albums(): List<Album> = filter { it.album.isNotBlank() }.groupBy { it.albumKey }
+    .filterValues { ts -> ts.size > 1 || ts.none { it.online } }.map { (key, ts) -> albumOf(key, ts) }
+    .sortedBy { it.title.lowercase() }
+
+/** The album [key] from these songs, even a single online one (Home's Album tile can open it). */
+fun List<Track>.album(key: String): Album? = filter { it.albumKey == key }.takeIf { it.isNotEmpty() }?.let { albumOf(key, it) }
+
+private fun albumOf(key: String, ts: List<Track>): Album {
     val artist = ts.groupingBy { it.artist }.eachCount().maxByOrNull { it.value }?.key.orEmpty()
-    Album(key, ts.first().album, artist, ts.sortedWith(compareBy({ it.trackNo }, { it.title.lowercase() })))
-}.sortedBy { it.title.lowercase() }
+    return Album(key, ts.first().album, artist, ts.sortedWith(compareBy({ it.trackNo }, { it.title.lowercase() })))
+}
 
 fun List<Track>.artists(): List<Artist> =
     groupBy { it.artist }.map { Artist(it.key, it.value) }.sortedBy { it.name.lowercase() }
@@ -49,9 +60,14 @@ fun fmtTotal(ms: Long): String {
 /** What the songs live on, for labels: "phone" on Android, "PC" on Windows. */
 var device = "phone"
 
+/** The iTunes store searched for albums and artists; Settings › Region sets it. */
+var storeCountry = "US"
+
 /** What each platform supplies: its music files, covers, a player deck and small settings. */
 interface Platform {
     val isDesktop: Boolean
+    /** The country the phone or PC is set to, like "IN". */
+    val country: String get() = "US"
     suspend fun scan(): List<Track>
     suspend fun art(track: Track): ImageBitmap?
     fun newDeck(): Deck
@@ -141,6 +157,8 @@ class Library(private val platform: Platform, private val scope: CoroutineScope,
 
     /** Adds an online song to the library, or takes it out again. */
     fun toggleSaved(t: Track) { saved.toggle(t); refilter() }
+    /** A whole online album in or out of the library. */
+    fun setSaved(ts: List<Track>, on: Boolean) { saved.setAll(ts, on); refilter() }
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
     val art = ArtCache(platform)

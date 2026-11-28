@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.myna.player.OnlineAlbum
 import com.myna.player.OnlineArtist
 import com.myna.player.Track
+import com.myna.player.album
 import com.myna.player.albums
 import com.myna.player.artists
 import com.myna.player.fmtTotal
@@ -319,6 +322,29 @@ internal fun MoreBtn(items: List<Pair<String, () -> Unit>>, tint: Color = LocalP
     }
 }
 
+/** Opens [t]'s album with every song on it: found online for streamed songs, else the library's album. */
+internal fun goToAlbum(app: AppCtx, t: Track) = when {
+    t.online && app.platform.online != null -> app.nav.push(Page.SongAlbumP(t))
+    t.album.isNotBlank() -> app.nav.push(Page.AlbumP(t.albumKey))
+    else -> Unit
+}
+
+/** Finds [t]'s album online, then shows it like any online album. */
+@Composable
+fun SongAlbumScreen(app: AppCtx, t: Track) {
+    val p = LocalPal.current
+    val found by produceState<OnlineAlbum?>(null, t.id) { value = app.platform.online?.albumOf(t) }
+    var done by remember(t.id) { mutableStateOf(false) }
+    LaunchedEffect(t.id) { kotlinx.coroutines.delay(15_000); done = true }
+    val a = found
+    when {
+        a != null -> OnlineAlbumScreen(app, a)
+        else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Txt(if (done) "Couldn't find this song's album" else "Finding the album…", 15, FontWeight.Bold, p.sub)
+        }
+    }
+}
+
 /** The ⋯ on a song: like, add to a playlist, go to its album or artist, or take it out of [playlist]. */
 @Composable
 internal fun SongMenu(app: AppCtx, t: Track, current: Boolean, playlist: String? = null) {
@@ -338,7 +364,7 @@ internal fun SongMenu(app: AppCtx, t: Track, current: Boolean, playlist: String?
                 MenuItem(if (app.library.likes.has(t)) "Unlike" else "Like") { app.library.likes.toggle(t); close() }
                 if (t.online) MenuItem(if (app.library.saved.has(t)) "Remove from library" else "Add to library") { app.library.toggleSaved(t); close() }
                 MenuItem("Add to playlist…") { pick = true }
-                if (t.album.isNotBlank()) MenuItem("Go to album") { close(); app.nav.push(Page.AlbumP(t.albumKey)) }
+                if (t.online || t.album.isNotBlank()) MenuItem("Go to album") { close(); goToAlbum(app, t) }
                 MenuItem("Go to artist") { close(); app.nav.push(Page.ArtistP(t.artist)) }
                 if (playlist != null) MenuItem("Remove from playlist") { pls.songs(playlist).remove(t); close() }
             }
@@ -468,26 +494,48 @@ fun ListScreen(app: AppCtx, id: String) {
     }
 }
 
+/**
+ * An album's cover, name, details and [actions]. Wide screens put the cover beside the rest,
+ * so the songs start right below; phones stack them.
+ */
+@Composable
+private fun AlbumHead(app: AppCtx, cover: Track?, title: String, info: String, actions: @Composable () -> Unit) {
+    val p = LocalPal.current
+    if (app.wide) Row(Modifier.fillMaxWidth().height(232.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        Cover(cover, Modifier.size(232.dp), 20.dp)
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Tile(Modifier.fillMaxWidth().weight(1f), pad = 20.dp) {
+                Spacer(Modifier.weight(1f))
+                Txt("ALBUM", 11, FontWeight.Bold, p.sub)
+                Txt(title, 34, FontWeight.ExtraBold, lines = 2)
+                Spacer(Modifier.height(4.dp))
+                Txt(info, 13, FontWeight.Bold, p.sub, lines = 1)
+            }
+            actions()
+        }
+    } else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Cover(cover, Modifier.fillMaxWidth().aspectRatio(1.15f), 20.dp)
+        Tile(Modifier.fillMaxWidth(), pad = 16.dp) {
+            Txt(title, 28, FontWeight.ExtraBold, lines = 2)
+            Spacer(Modifier.height(2.dp))
+            Txt(info, 13, FontWeight.Bold, p.sub, lines = 2)
+        }
+        actions()
+    }
+}
+
 @Composable
 fun AlbumScreen(app: AppCtx, key: String) {
     val p = LocalPal.current
     val tracks by app.library.tracks.collectAsState()
     val st by app.engine.state.collectAsState()
     val all = remember(tracks, app.library.likes.tracks, app.library.recent.tracks) { app.library.known(tracks) }
-    val a = remember(all, key) { all.albums().firstOrNull { it.key == key } } ?: return
+    val a = remember(all, key) { all.album(key) } ?: return
     val year = a.tracks.maxOf { it.year }
     val info = listOfNotNull(a.artist, if (year > 0) "$year" else null, plural(a.tracks.size, "song"), fmtTotal(a.tracks.sumOf { it.durationMs })).joinToString(" · ")
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { PageHdr(app) { MoreBtn(listOf("Go to artist" to { app.nav.push(Page.ArtistP(a.artist)) }), tile = true) } }
-        item { Cover(a.tracks.first(), Modifier.fillMaxWidth(if (app.wide) 0.5f else 1f).aspectRatio(1.15f), 20.dp) }
-        item {
-            Tile(Modifier.fillMaxWidth(), pad = 16.dp) {
-                Txt(a.title, 28, FontWeight.ExtraBold, lines = 2)
-                Spacer(Modifier.height(2.dp))
-                Txt(info, 13, FontWeight.Bold, p.sub, lines = 2)
-            }
-        }
-        item { PlayShuffle(app, a.tracks, a.title) }
+        item { AlbumHead(app, a.tracks.first(), a.title, info) { PlayShuffle(app, a.tracks, a.title) } }
         itemsIndexed(a.tracks, key = { _, t -> t.id }) { i, t ->
             SongRow(t, st.current?.id == t.id, number = t.trackNo) { app.engine.play(a.tracks, i, from = a.title) }
         }
@@ -576,18 +624,22 @@ fun OnlineAlbumScreen(app: AppCtx, a: OnlineAlbum) {
     ).joinToString(" · ")
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { PageHdr(app) { MoreBtn(listOf("Go to artist" to { app.nav.push(Page.ArtistP(a.artist)) }), tile = true) } }
-        item { Cover(a.coverTrack, Modifier.fillMaxWidth(if (app.wide) 0.5f else 1f).aspectRatio(1.15f), 20.dp) }
         item {
-            Tile(Modifier.fillMaxWidth(), pad = 16.dp) {
-                Txt(a.title, 28, FontWeight.ExtraBold, lines = 2)
-                Spacer(Modifier.height(2.dp))
-                Txt(info, 13, FontWeight.Bold, p.sub, lines = 2)
+            AlbumHead(app, a.coverTrack, a.title, info) {
+                when {
+                    songs == null -> Txt("Loading songs…", 14, color = p.sub, modifier = Modifier.padding(4.dp))
+                    list.isEmpty() -> Txt("Couldn't load this album's songs. Check your connection.", 14, color = p.sub, lines = 2, modifier = Modifier.padding(4.dp))
+                    else -> {
+                        // Add to library saves every song; they then show under Albums in the library.
+                        val added = list.all { app.library.saved.has(it) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ActionTile(Ic.play, "Play", true) { app.engine.play(list, 0, from = a.title) }
+                            ActionTile(Ic.shuffle, "Shuffle", false) { app.engine.play(list, list.indices.random(), shuffle = true, from = a.title) }
+                            ActionTile(if (added) Ic.check else Ic.plus, if (added) "Added" else "Add", false) { app.library.setSaved(list, !added) }
+                        }
+                    }
+                }
             }
-        }
-        when {
-            songs == null -> item { Txt("Loading songs…", 14, color = p.sub, modifier = Modifier.padding(4.dp)) }
-            list.isEmpty() -> item { Txt("Couldn't load this album's songs. Check your connection.", 14, color = p.sub, lines = 2, modifier = Modifier.padding(4.dp)) }
-            else -> item { PlayShuffle(app, list, a.title) }
         }
         itemsIndexed(list, key = { _, t -> t.id }) { i, t ->
             val on = st.current?.id == t.id

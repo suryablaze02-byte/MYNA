@@ -134,7 +134,7 @@ private fun MoreMenu(app: AppCtx) {
         DropdownMenu(open, { open = false }) {
             fun go(p: Page) { open = false; app.nav.npPage = 0; app.nav.push(p) }
             if (t.online) MenuItem(if (app.library.saved.has(t)) "Remove from library" else "Add to library") { open = false; app.library.toggleSaved(t) }
-            if (t.album.isNotBlank()) MenuItem("Go to album") { go(Page.AlbumP(t.albumKey)) }
+            if (t.online || t.album.isNotBlank()) MenuItem("Go to album") { open = false; app.nav.npPage = 0; goToAlbum(app, t) }
             MenuItem("Go to artist") { go(Page.ArtistP(t.artist)) }
             MenuItem("Sound") { go(Page.Set(6)) }
         }
@@ -153,7 +153,7 @@ private fun PlayerView(app: AppCtx, t: Track) {
         if (app.wide) {
             Row(Modifier.fillMaxSize().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
                 Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                    LivingCover(app, Modifier.widthIn(max = 460.dp).fillMaxWidth().aspectRatio(1f))
+                    LivingCover(app, Modifier.widthIn(max = 460.dp).fillMaxWidth().aspectRatio(1f).swipeSongs(app))
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { NpTiles(app, t) }
             }
@@ -162,13 +162,36 @@ private fun PlayerView(app: AppCtx, t: Track) {
             Column(Modifier.fillMaxSize().padding(horizontal = 14.dp).padding(bottom = 12.dp)) {
                 // Square, so the whole cover always shows (no cropping when space is short).
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    LivingCover(app, Modifier.aspectRatio(1f, matchHeightConstraintsFirst = true))
+                    LivingCover(app, Modifier.aspectRatio(1f, matchHeightConstraintsFirst = true).swipeSongs(app))
                 }
                 Spacer(Modifier.height(8.dp))
                 NpTiles(app, t)
             }
         }
     }
+}
+
+/** Swipe the cover left for the next song, right for the one before. It follows the finger and springs back. */
+@Composable
+private fun Modifier.swipeSongs(app: AppCtx): Modifier {
+    var dx by remember { mutableStateOf(0f) }
+    var held by remember { mutableStateOf(false) }
+    val shown by androidx.compose.animation.core.animateFloatAsState(if (held) dx else 0f, if (held) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring())
+    val far = with(androidx.compose.ui.platform.LocalDensity.current) { 90.dp.toPx() }
+    return this
+        .graphicsLayer { translationX = shown; alpha = 1f - (kotlin.math.abs(shown) / (far * 4)).coerceIn(0f, 0.4f) }
+        .pointerInput(Unit) {
+            detectHorizontalDragGestures(
+                onDragStart = { held = true; dx = 0f },
+                onDragEnd = {
+                    val i = app.engine.state.value.index
+                    // Right always goes to the song before (unlike the Previous button, which restarts first).
+                    if (dx <= -far) app.engine.next() else if (dx >= far) { if (i > 0) app.engine.jump(i - 1) else app.engine.seek(0) }
+                    held = false; dx = 0f
+                },
+                onDragCancel = { held = false; dx = 0f },
+            ) { ch, d -> ch.consume(); dx += d }
+        }
 }
 
 @Composable
@@ -181,12 +204,14 @@ private fun NpTiles(app: AppCtx, t: Track) {
                 Txt(t.title, 20, FontWeight.ExtraBold, lines = 1)
                 Txt(listOf(t.artist, t.album).filter { it.isNotBlank() }.joinToString(" · "), 13, color = p.sub)
             }
+            // White until the song is liked, then red.
             val liked = app.library.likes.has(t)
+            val likeBg by animateColorAsState(if (liked) LikeRed else Color.White)
             Box(
-                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(LikeRed)
+                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(likeBg)
                     .clickable { app.library.likes.toggle(t) },
                 contentAlignment = Alignment.Center,
-            ) { Ico(if (liked) Ic.heartOn else Ic.heart, 28.dp, Color.White) }
+            ) { Ico(if (liked) Ic.heartOn else Ic.heart, 28.dp, if (liked) Color.White else Color(0xFF111111)) }
         }
         SeekTile(app)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -312,12 +337,7 @@ private fun LivingCover(app: AppCtx, modifier: Modifier) {
 @Composable
 private fun LyricsView(app: AppCtx, t: Track) {
     val p = LocalPal.current
-    val st by app.engine.state.collectAsState()
-    val lyr by produceState<Lyrics?>(null, t.id) { value = null; value = Lyrics.forTrack(app.platform, t, app.library.prefs.lyricsDl.on) }
-    val cur = lyr?.at(st.positionMs) ?: -1
-    val list = rememberLazyListState()
-    LaunchedEffect(cur) { if (cur >= 0) list.animateScrollToItem((cur - 2).coerceAtLeast(0)) }
-    val bg = if (p.dark) p.tile else Ink
+    val lyr = rememberLyrics(app, t)
     Column(Modifier.fillMaxSize()) {
         NpHeader(app, Ic.down, { app.nav.npPage = 0 }, start = true) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -326,29 +346,46 @@ private fun LyricsView(app: AppCtx, t: Track) {
                 Column { Txt(t.title, 14, FontWeight.Bold); Txt(t.artist, 12, color = p.sub) }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp).clip(RoundedCornerShape(20.dp)).background(bg)) {
-            val l = lyr
-            when {
-                l == null -> Txt("Finding lyrics…", 18, FontWeight.ExtraBold, Color.White.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.Center))
-                l.lines.isEmpty() -> Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Txt("No lyrics for this song", 18, FontWeight.ExtraBold, Color.White)
-                    Txt(if (app.library.prefs.lyricsDl.on) "None were found online." else "Lyrics download is off in Settings.", 13, color = Color.White.copy(alpha = 0.6f))
-                }
-                else -> LazyColumn(state = list, contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    itemsIndexed(l.lines) { i, (ms, line) ->
-                        val now = i == cur
-                        Txt(
-                            line, if (now) 25 else 19, FontWeight.ExtraBold,
-                            when { now -> Lime; !l.synced -> Color.White.copy(alpha = 0.85f); i < cur -> Color.White.copy(alpha = 0.22f); else -> Color.White.copy(alpha = 0.38f) },
-                            lines = 4, modifier = Modifier.clickable(enabled = l.synced) { app.engine.seek(ms) },
-                        )
-                    }
-                }
-            }
-        }
+        LyricsBox(app, lyr, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp))
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SeekTile(app, label = when { lyr?.synced == true -> "Synced lyrics"; lyr?.lines?.isNotEmpty() == true -> "Lyrics"; else -> "" })
             PauseTile(app)
+        }
+    }
+}
+
+/** This song's lyrics, null while they're being found. */
+@Composable
+internal fun rememberLyrics(app: AppCtx, t: Track): Lyrics? =
+    produceState<Lyrics?>(null, t.id) { value = null; value = Lyrics.forTrack(app.platform, t, app.library.prefs.lyricsDl.on) }.value
+
+/** The lyrics, the line being sung in lime; tap a synced line to jump there. */
+@Composable
+internal fun LyricsBox(app: AppCtx, lyr: Lyrics?, modifier: Modifier) {
+    val p = LocalPal.current
+    val st by app.engine.state.collectAsState()
+    val cur = lyr?.at(st.positionMs) ?: -1
+    val list = rememberLazyListState()
+    LaunchedEffect(cur) { if (cur >= 0) list.animateScrollToItem((cur - 2).coerceAtLeast(0)) }
+    val bg = if (p.dark) p.tile else Ink
+    Box(modifier.clip(RoundedCornerShape(20.dp)).background(bg)) {
+        val l = lyr
+        when {
+            l == null -> Txt("Finding lyrics…", 18, FontWeight.ExtraBold, Color.White.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.Center))
+            l.lines.isEmpty() -> Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Txt("No lyrics for this song", 18, FontWeight.ExtraBold, Color.White)
+                Txt(if (app.library.prefs.lyricsDl.on) "None were found online." else "Lyrics download is off in Settings.", 13, color = Color.White.copy(alpha = 0.6f))
+            }
+            else -> LazyColumn(state = list, contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                itemsIndexed(l.lines) { i, (ms, line) ->
+                    val now = i == cur
+                    Txt(
+                        line, if (now) 25 else 19, FontWeight.ExtraBold,
+                        when { now -> Lime; !l.synced -> Color.White.copy(alpha = 0.85f); i < cur -> Color.White.copy(alpha = 0.22f); else -> Color.White.copy(alpha = 0.38f) },
+                        lines = 4, modifier = Modifier.clickable(enabled = l.synced) { app.engine.seek(ms) },
+                    )
+                }
+            }
         }
     }
 }
